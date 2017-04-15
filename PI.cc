@@ -243,7 +243,8 @@ void Collision(Node***array, int X, int Y, int Z, int R1, int R2, int start)
 			{
 				if(array[x][y][z].o)
 					break;
-				array[x][y][z] = collision(array[x][y][z]);
+				else
+					array[x][y][z] = collision(array[x][y][z]);
 			}
 		}
 	}
