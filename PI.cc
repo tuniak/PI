@@ -19,6 +19,7 @@
 #define G 64
 #define H 128
 
+#define allCells (A+B+C+D+E+F+G+H)
 #define dirX (B+D+F+H)
 #define dirY (E+F+G+H)
 #define dirZ (A+B+E+F)
@@ -230,7 +231,7 @@ Node collision(Node node)
 }
 
 // we go through the whole grid and resolve collisions in nodes
-void Collision(Node***array, int X, int Y, int Z, int R1, int R2, int start)
+void Collision(Node***array, int X, int Y, int Z, int start)
 {
 	int x,y,z;
 
@@ -241,10 +242,7 @@ void Collision(Node***array, int X, int Y, int Z, int R1, int R2, int start)
 		{
 			for(z = start; z < Z; z+=2)
 			{
-				if(array[x][y][z].o)
-					break;
-				else
-					array[x][y][z] = collision(array[x][y][z]);
+				array[x][y][z] = collision(array[x][y][z]);
 			}
 		}
 	}
@@ -260,7 +258,7 @@ int PeriodicBC(int n, int N)
 }
 
 // Propagate particles from nodes in array to new nodes in new_array
-void Propagation(Node***array, int X, int Y, int Z, int R1, int R2, int start)
+void Propagation(Node***array, int X, int Y, int Z, int start)
 {
 	Node node;
 	unsigned char m;
@@ -303,53 +301,17 @@ void Propagation(Node***array, int X, int Y, int Z, int R1, int R2, int start)
 						else
 							zN = PeriodicBC(z-1,Z);
 
-						// if there is obstacle in the new node,
-						// it stays in the old node, but we reflect it to diagonal cell
-						if( array[xN][yN][zN].o )
-						{
-							array[xN][yN][zN].m |= cell[7-c];
-							for (i = 0; i < 3; ++i)
-							{
-								if(p[i] & cell[c])
-									array[xN][yN][zN].p[i] |= cell[7-c];
-							}
-							/*particles disappear on 0 and Z-1 */
-							// this holds in this particular computation
-														
-							if(zN == 0 || zN == Z-1)
-							{
-								array[xN][yN][zN].m = 0;
-								for (int i = 0; i < 3; ++i)
-								{
-									array[xN][yN][zN].p[i] = 0;
-								}
-							}
-						}	
-						else //if there is no obstacle in the new node, we propagate particle to the new node
-						{
-							array[xN][yN][zN].m |= cell[c];
-							for(i = 0; i < 3; ++i)
-							{
-								if(p[i] & cell[c])
-									array[xN][yN][zN].p[i] |= cell[c];
-							}
-							/*particles disappear on the 0 and X-1 */
-														
-							if (zN == 0 || zN == Z-1)
-							{
-								array[xN][yN][zN].m = 0;
-								for (i = 0; i < 3; ++i)
-									array[xN][yN][zN].p[i] = 0;
-							}
-						}
+						array[xN][yN][zN].m |= cell[c];
+						array[xN][yN][zN].p[0] |= cell[c] & p[0];
+						array[xN][yN][zN].p[1] |= cell[c] & p[1];
+						array[xN][yN][zN].p[2] |= cell[c] & p[2];
 					}
 				}
 				//in the old array, we set the node to 0
 				array[x][y][z].m = 0;
-				for(i = 0; i < 3; ++i)
-				{
-					array[x][y][z].p[i] = 0;
-				}
+				array[x][y][z].p[0] = 0;
+				array[x][y][z].p[1] = 0;
+				array[x][y][z].p[2] = 0;
 			}
 		}
 	}
@@ -678,19 +640,21 @@ Node*** allocate_grid_array(int X, int Y, int Z)
 // in the middle of a plain z = const, we put one particle with p[0] = 1; p[1]=p[2]=0;
 void set_initial(Node***a, int X, int Y, int Z)
 {
-			for (int x = 1; x < X-1; ++x)
-				for(int y =1; y < Y-1; ++y)
-				{
-					for (int c = 0; c < 8; ++c)
-					{
-						if(c == 0 || c == 1 || c == 4 || c == 5)
-						{
-							a[x][y][0].m |= cell[c];
-							for (int i = 0; i < 3; ++i)
-								a[x][y][0].p[i] |= cell[c];
-						}
-					}
-				}
+	int Xb = X/3;
+	int Xe = 2*Xb;
+	int Yb = Y/3;
+	int Ye = 2*Yb;
+	int Zb = Z/3;
+	int Ze = 2*Zb;
+	for (int x = Xb; x < Xe; x+=2)
+		for(int y = Yb; y < Ye; y+=2)
+			for (int z = Zb; z < Ze; z+=2)
+			{
+				a[x][y][z].m = allCells;
+				a[x][y][z].p[0] = 0;
+				a[x][y][z].p[1] = 0;
+				a[x][y][z].p[2] = 0;
+			}
 }
 
 string write_sphere(int* S, int R, int X, int Y, int Z)
@@ -1555,17 +1519,17 @@ int main(int argc, char**argv)
 	time_t START = time(NULL);
 
 	//size of the grid
-	int X = 400;
-	int Y = 400;
-	int Z = 800;
+	int X = 240;
+	int Y = 240;
+	int Z = 240;
 
-	int T = 3000;
+	int T = 2000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
-	int dx = 80;
-	int dy = 80;
-	int dz = 80;
+	int dx = 10;
+	int dy = 10;
+	int dz = 10;
 
 	// number of areas along X,Y,Z axes
 	int I = (X / dx);
@@ -1603,26 +1567,26 @@ int main(int argc, char**argv)
 
 
 	/* SET TUNNEL BY OBSTACLES */
-	set_tunnel(array,X,Y,Z);
+	//set_tunnel(array,X,Y,Z);
 	//set_tunnel(even,X,Y,Z);
 
 	/* RADIUS AND MIDDLE OF THE SPHERICAL OBSTACLE AND ROUND PLATE */
-	int R = X/4;
+//	int R = X/4;
 
-	int S = 200;
-	int Sp[3] = {X/2, Y/2, S};
+//	int S = 200;
+//	int Sp[3] = {X/2, Y/2, S};
 
-	int R2out = R*R;
+//	int R2out = R*R;
 
 	/* SET OBSTACLES */
-	set_sphere(array,S,R,X,Y,Z);
+//	set_sphere(array,S,R,X,Y,Z);
 //	set_plate(array,S,R,X,Y,Z);
 	
-	string obstacle;
-	obstacle = write_sphere(Sp,R,X,Y,Z);
+//	string obstacle;
+//	obstacle = write_sphere(Sp,R,X,Y,Z);
 //	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
 	
-	//set_initial(odd,X,Y,Z);
+	set_initial(array,X,Y,Z);
 	
 
 	int start;
@@ -1640,7 +1604,7 @@ int main(int argc, char**argv)
 		//	SRCorrelation(velocity,SRC,I,J,K);		
 		//	covariance_tensor(velocity,Gamma,I,J,K);
 			file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
-			plot(file_name,X,Y,Z,obstacle);
+			plot(file_name,X,Y,Z);
 		}
 		if (!(t%100))
 			cout << "zatial " <<  START - time(NULL) << " sekund" << endl;
@@ -1687,9 +1651,9 @@ int main(int argc, char**argv)
 		}
 		*/
 	//	sphere_to_middle_flow(array, X, Y, Z, R, R2in, R2out, start);
-		flow_in_Z(array, X, Y, Z);
-		Collision(array, X, Y, Z, R, R2out, start);
-		Propagation(array, X, Y, Z, R, R2out, start);
+	//	flow_in_Z(array, X, Y, Z);
+		Collision(array, X, Y, Z, start);
+		Propagation(array, X, Y, Z, start);
 	}
 	time_t STOP = time(NULL);
 	printf("trvalo to %lu sekund\n", STOP - START);
