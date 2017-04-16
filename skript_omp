@@ -1,4 +1,4 @@
-cd /storage/brno2/home/tomasikm/PI_26/
-g++ -std=c++0x -fopenmp /storage/brno2/home/tomasikm/PI_26/PI.cc
-export OMP_NUM_THREADS=16
-/storage/brno2/home/tomasikm/PI_26/a.out
+cd /auto/plzen1/home/tomasikm/PI/
+g++ -std=c++0x -O3 -fopenmp /auto/plzen1/home/tomasikm/PI/PI.cc
+export OMP_NUM_THREADS=32
+/auto/plzen1/home/tomasikm/PI/a.out
