@@ -1,3 +1,4 @@
+//12.7.   rychlosti v uzloch nedelime, budu to integere
 #include <omp.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,12 +37,12 @@ using namespace std;
 //mass and momenta of 8 cells in one node (8 bits in char)
 //int o = 0 ... obstacle is not present; int o != 0, obstacle in the node (int o = 1 is obstacle in x direction...)  
 
-unsigned char cell[8] = {A, B, C, D, E, F, G, H};
+unsigned char cell[8]		= {A, B, C, D, E, F, G, H};
 typedef struct
 {
 	unsigned char m;
 	unsigned char p[3];
-	int o;
+	//int o;
 } Node;
 //na obstacle by stacil char, ale 64 bitove procesory preferuju pracu s 64 bitovymi strukturami, preto sme doplnili Node na 8 bytov (4x char + 1x int = 8 bytes)
 //mohli sme stav uzlu reprezentovat aj ako char n[5], kde n[0] by bola hmotnost, n[1],n[2],n[3] by boli hybnosti a n[5] prekazka
@@ -61,7 +62,7 @@ unsigned char Pair[3][4][2] =
 };
 
 //collision in the single node
-Node collision(Node node)
+Node collision(Node &node)
 {
 	//mass
 	unsigned char m = node.m;
@@ -230,21 +231,23 @@ Node collision(Node node)
 }
 
 // we go through the whole grid and resolve collisions in nodes
-void Collision(Node***array, int X, int Y, int Z, int R1, int R2, int start)
+void Collision(Node***array, int X, int Y, int Z, int R, int R2, int start)
 {
 	int x,y,z;
+	int x2,y2,z2;
 
-#pragma omp parallel for private (x,y,z)
+#pragma omp parallel for private (x,y,z,x2,y2,z2)
 	for (x = start; x < X; x+=2)
 	{
+		x2 = pow(x - R,2);
 		for(y = start; y < Y; y+=2)
 		{
+			y2 = pow(y - R,2);
 			for(z = start; z < Z; z+=2)
 			{
-				if(array[x][y][z].o)
-					break;
-				else
-					array[x][y][z] = collision(array[x][y][z]);
+				z2 = (z - R,2);
+				if ( x2 + y2 + z2 < R2 )
+					collision(array[x][y][z]);
 			}
 		}
 	}
@@ -262,93 +265,50 @@ int PeriodicBC(int n, int N)
 // Propagate particles from nodes in array to new nodes in new_array
 void Propagation(Node***array, int X, int Y, int Z, int R1, int R2, int start)
 {
-	Node node;
-	unsigned char m;
-	unsigned char*p;
     int x, y, z;
+	int x2, y2, z2;
 	int xN, yN, zN;
-	int c, i;
+	int c;
 
-#pragma omp parallel for private (m, p, x, y, z, xN, yN, zN, c, i)
+#pragma omp parallel for private ( x, y ,z, x2,y2,z2, xN, yN, zN, c )
 	//prejdeme kazdy uzol mriezky
-    for(x = start; x < X; x+=2)
+   	for(x = start; x < X; x+=2)
 	{
+		x2 = pow(x - R1,2);
 		for(y = start; y < Y; y+=2)
 		{
+			y2 = pow(y - R1,2);
 			for(z = start; z < Z; z+=2)
 			{
-				// hmotnot uzla (m je char, cize je to 8 bitov - 1 bit pre kazdu bunku v uzli)
-				m = array[x][y][z].m;
-				// hybnost uzla, je to trojica charov (tri
-				p = array[x][y][z].p;
-			
+				z2 = pow(z - R1,2);
+				if ( x2 + y2 + z2 < R2 )
+				{				
 				// we look at each cell in node
-				for (c = 0; c < 8; ++c)
+				for (c = 1; c <= H; c <<= 1)
 				{
 					//if there is particle in the cell, we want to propagate it to corresponding node
-					if(m & cell[c])
+					if(array[x][y][z].m & c)
 					{
-						// if particle from cell[c] propagates in positive direction of X
-						if (cell[c] & dirX)
-							xN = PeriodicBC(x+1,X);
-						// else particle propagates in negative direction of x
-						else
-							xN = PeriodicBC(x-1,X);
-						if (cell[c] & dirY)
-							yN = PeriodicBC(y+1,Y);
-						else
-							yN = PeriodicBC(y-1,Y);
-						if (cell[c] & dirZ)
-							zN = PeriodicBC(z+1,Z);
-						else
-							zN = PeriodicBC(z-1,Z);
+						// if particle from cell propagates in positive direction of X
+						xN = c & dirX ? (x+1) % X : (x-1+X) % X;
+						yN = c & dirY ? (y+1) % Y : (y-1+Y) % Y;
+						zN = c & dirZ ? (z+1) % Z : (z-1+Z) % Z;
 
-						// if there is obstacle in the new node,
-						// it stays in the old node, but we reflect it to diagonal cell
-						if( array[xN][yN][zN].o )
-						{
-							array[xN][yN][zN].m |= cell[7-c];
-							for (i = 0; i < 3; ++i)
-							{
-								if(p[i] & cell[c])
-									array[xN][yN][zN].p[i] |= cell[7-c];
-							}
-							/*particles disappear on 0 and Z-1 */
-							// this holds in this particular computation
-														
-							if(zN == 0 || zN == Z-1)
-							{
-								array[xN][yN][zN].m = 0;
-								for (int i = 0; i < 3; ++i)
-								{
-									array[xN][yN][zN].p[i] = 0;
-								}
-							}
-						}	
-						else //if there is no obstacle in the new node, we propagate particle to the new node
-						{
-							array[xN][yN][zN].m |= cell[c];
-							for(i = 0; i < 3; ++i)
-							{
-								if(p[i] & cell[c])
-									array[xN][yN][zN].p[i] |= cell[c];
-							}
-							/*particles disappear on the 0 and X-1 */
-														
-							if (zN == 0 || zN == Z-1)
-							{
-								array[xN][yN][zN].m = 0;
-								for (i = 0; i < 3; ++i)
-									array[xN][yN][zN].p[i] = 0;
-							}
-						}
+#pragma omp atomic
+						array[xN][yN][zN].m |= c & array[x][y][z].m;
+#pragma omp atomic
+						array[xN][yN][zN].p[0] |= c & array[x][y][z].p[0];
+#pragma omp atomic
+						array[xN][yN][zN].p[1] |= c & array[x][y][z].p[1];
+#pragma omp atomic
+						array[xN][yN][zN].p[2] |= c & array[x][y][z].p[2];
 					}
 				}
-				//in the old array, we set the node to 0
+
 				array[x][y][z].m = 0;
-				for(i = 0; i < 3; ++i)
-				{
-					array[x][y][z].p[i] = 0;
+				array[x][y][z].p[0] = 0;
+				array[x][y][z].p[1] = 0;
+				array[x][y][z].p[2] = 0;
 				}
 			}
 		}
@@ -356,7 +316,7 @@ void Propagation(Node***array, int X, int Y, int Z, int R1, int R2, int start)
 }
 
 
-void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R1, int R2in, int R2out, int start)
+void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R2out, int start)
 {
 //	random_device rd;
 //	mt19937 rng(rd());
@@ -368,24 +328,27 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R1, int R2in, int 
 	int x2, y2, z2;
 	int Rc;
 	
-	int is    = cos(PI / 8) * R1;
-	int isnot = sin(PI / 8) * R1;
+	//int R1 = R + 1;
+	//int R2out = R*R;
+	//int R2in = (R-2)*(R-2);
+	int is    = cos(PI / 8) * R;
+	int isnot = sin(PI / 8) * R;
 	
 	int c;
 	char c1, c2;
-#pragma omp parallel for private (x, y , z, x1, y1, z1, x2, y2, z2, Rc, c, c1, c2)
+#pragma omp parallel for private (x,y,z,x1,y1,z1,x2,y2,z2,Rc,c,c1,c2)
 	for (x = start; x < X; x+=2)
 	{
-		x1 = (x-R1);
-		x2 = x1*x1;
+		x1 = x - R;
+		x2 = pow(x1,2);
 		for (y = start; y < Y; y+=2)
 		{
-			y1 = (y-R1);
-			y2 = y1*y1;
+			y1 = y - R;
+			y2 = pow(y1,2);
 			for (z = start; z < Z; z+=2)
 			{
-				z1 = (z-R1);
-				z2 = z1*z1;
+				z1 = z - R;
+				z2 = pow(z1,2);
 				Rc = x2 + y2 + z2;
 				
 				// we are on the sphere with thickness 1
@@ -579,7 +542,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R1, int R2in, int 
 						a[x][y][z].p[1] |= c1;
 						a[x][y][z].p[1] |= c2;
 					}
-					if (x1 > 0)
+					else if (x1 > 0)
 					{
 						if (y1 > 0)
 						{
@@ -712,7 +675,7 @@ string write_sphere(int* S, int R, int X, int Y, int Z)
 
 	double phi, theta;
 	
-	double step  = atan(30.0 / R);
+	double step  = atan(7.0 / R);
 
 	for(theta = 0; theta < PI; theta += step)
 	{
@@ -819,53 +782,37 @@ string set_and_write_sphere(Node***a, int* s, int R, int X, int Y, int Z)
 
 
 
-void set_plate(Node***a, int S, int R, int X, int Y, int Z)
+void set_plate(Node***a, int x, int y, int z, int X, int Y, int Z)
 {
-	int Sx = X / 2;
-	int Sy = Y / 2;
-	int z = S;
-	
-	int R2 = R*R;
+	int y1 = (Y-y)/2;
+	int y2 = y1 + y;
 
-	int x, y;
-	int x2, y2;
+	int x1 = (X-x)/2;
+	int x2 = x1 + x;
 
-#pragma omp parallel for private (x,y,x2,y2)
-	for(x = 0; x < X; ++x)
-	{
-		x2 = (x - Sx) * (x - Sx);
-		for(y = 0; y < Y; ++y)
+	for(int i = y1; i < y2; ++i)
+		for (int j = x1; j < x2; ++j)
 		{
-			y2 = (y - Sy) * (y - Sy);
-			if (x2 + y2 < R2)
-				a[x][y][z].o = 1;
+			//a[j][i][z].o = 1;
 		}
-	}
 }
 
-string write_plate(int Sx, int Sy, int z, int X, int Y, int Z, int dx)
+string write_plate(int x, int y, int z, int X, int Y, int Z, int dx)
 {
 	ofstream out;
 	string file_name = "plate";
 	out.open(file_name);
+
+	int y1 = (Y-y)/2;
+	int y2 = y1 + y;
+
+	int z1 = (Z-z)/2;
+	int z2 = z1 + z;
+	cout << x << " " << y1 << " " << y2 << " " << z1 << " " << z2 << endl;	
+	for (int i = y1; i < y2; i+=dx)
+		for (int j = z1; j < z2; j+=dx)
+			out << x << "\t" << i << "\t" << j << endl;
 	
-	int R2 = pow(Sx / 2, 2);
-
-	int step = dx / 2;
-	int x, y;
-	int x2, y2;
-
-	for (x = 0; x < X; x += step)
-	{
-		x2 = pow(x - Sx, 2);
-		for (y = 0; y < Y; y += step)
-		{
-			y2 = pow(y - Sy, 2);
-			if (x2 + y2 < R2)
-				out << x << "\t" << y << "\t" << z << endl;
-		}
-	}
-
 	out.close();
 	return file_name;
 }
@@ -876,45 +823,64 @@ void set_tunnel(Node***a, int X, int Y, int Z)
 	{
 		for (int y = 0; y < Y; ++y)
 		{
-			a[0][y][z].o = 1;
-			a[X-1][y][z].o = 1;
+//			a[0][y][z].o = 1;
+//			a[X-1][y][z].o = 1;
 		}
 		for (int x = 0; x < X; ++x)
 		{
-			a[x][0][z].o = 1;
-			a[x][Y-1][z].o = 1;
+//			a[x][0][z].o = 1;
+//			a[x][Y-1][z].o = 1;
 		}
 	}
 }
 
-void set_sphere(Node***a, int S, int R, int X, int Y, int Z)
+void set_sphere(Node***a, int* s, int R, int X, int Y, int Z)
 {
-	int Sx = X / 2;
-	int Sy = Y / 2;
-	int Sz = S;
+	int sX = s[0];
+	int sY = s[1];
+	int sZ = s[2];
 
-	int R2 = R * R;
+	int x;
+	int y1, y2, yS;
+	int z1, z2, zS;
+	double cos_theta;
 
-	int x, y, z;
-	int x1, y1, z1;
-	int x2, y2, z2;
+	double phi, theta;
+	
+	double step  = atan(1.0 / R);
 
-#pragma omp parallel for private (x,y,z,x1,y1,z1,x2,y2,z2)
-	for(x = 0; x < X; ++x)
+	for(theta = 0; theta < PI; theta += step)
 	{
-		x1 = x - Sx;
-		x2 = x1 * x1;
-		for(y = 0; y < Y; ++y)
+		// 1) we take phi < PI, not 2*PI
+		//    we use fact that cos(-phi) = cos(phi) and sin(-phi) = -sin(phi)
+		//    so x(phi) = x(-phi), and y(phi) = -y(-phi) 
+		// 2) we fill also inside of the sphere with obstacles
+		//    we use for-cycle in y-direction
+		
+		zS = R*sin(theta);
+		z1 = sZ - zS;
+		z2 = sZ + zS;
+		cos_theta = cos(theta);
+
+		for(phi = 0; phi < PI; phi += step)
 		{
-			y1 = y - Sy;
-			y2 = y1 * y1;
-			for(z = 0; z < Sz + R + 1; ++z)
+
+			// cos(theta) is saved to variable, so we do not need compute it twice
+			
+			x = sX + R*cos(phi)*cos_theta;
+			
+			// yS is value of y from the "stredu" S
+			yS = R*sin(phi)*cos_theta;
+			y1 = sY - yS;
+			y2 = sY + yS;
+
+	
+			for (int i = y1; i <= y2; ++i)
 			{
-				z1 = z - Sz;
-				z2 = z1 * z1;
-				if(x2 + y2 + z2 < R2)
-					a[x][y][z].o = 1;
+//				a[x][i][z1].o = 1;
+//				a[x][i][z2].o = 1;
 			}
+				
 		}
 	}
 }
@@ -923,13 +889,13 @@ void set_sphere(Node***a, int S, int R, int X, int Y, int Z)
 double **** allocate_velocity_array(int I, int J, int K)
 {
 	int i,j,k;
-	double **** v = new double***[I];
+	double **** v = new double***[I]();
 	for (i = 0; i < I; ++i)
 	{
-		v[i] = new double**[J];
+		v[i] = new double**[J]();
 		for (j = 0; j < J; ++j)
 		{
-			v[i][j] = new double*[K];
+			v[i][j] = new double*[K]();
 			for (k = 0; k < K; ++k)
 			{
 				v[i][j][k] = new double[3]();
@@ -943,7 +909,7 @@ double **** allocate_velocity_array(int I, int J, int K)
 
 void compute_velocity(Node***array, double****v, double****mean, int dx, int dy, int dz, int I, int J, int K)
 {
-	double N = dx*dy*dz / 100;
+	double N = dx*dy*dz;
 
 	int i,j,k,l;
 	int x,y,z;
@@ -977,10 +943,12 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 										if (c & dirX)
 										{
 											++v[i][j][k][0];
+											++mean[i][j][k][0];
 										}
 										else
 										{
 											--v[i][j][k][0];
+											--mean[i][j][k][0];
 										}
 									}
 									if (c & p[1])
@@ -988,10 +956,12 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 										if (c & dirY)
 										{
 											++v[i][j][k][1];
+											++mean[i][j][k][1];
 										}
 										else
 										{
 											--v[i][j][k][1];
+											--mean[i][j][k][1];
 										}
 									}
 									if (c & p[2])
@@ -999,10 +969,12 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 										if (c & dirZ)
 										{
 											++v[i][j][k][2];
+											++mean[i][j][k][2];
 										}
 										else
 										{
 											--v[i][j][k][2];
+											--mean[i][j][k][2];
 										}
 									}
 								}
@@ -1015,9 +987,9 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 				v[i][j][k][1] /= N;
 				v[i][j][k][2] /= N;
 
-				mean[i][j][k][0] += v[i][j][k][0];
-				mean[i][j][k][1] += v[i][j][k][1];
-				mean[i][j][k][2] += v[i][j][k][2];
+				//mean[i][j][k][0] += v_0 / N;
+				//mean[i][j][k][1] += v_1 / N;
+				//mean[i][j][k][2] += v_2 / N;
 			}
 		}
 	}
@@ -1056,7 +1028,7 @@ void covariance_tensor(double****v,double*****g, int I, int J, int K)
 void finalize_covariance_tensor(double****mean, double*****g, int I, int J, int K, int p)
 {
 	int i,j,k,d,e;
-#pragma omp parallel for private (i,j,k,d,e)
+//#pragma omp parallel for private (i,j,k,d,e)
 	for(i=0; i<I; ++i)
 		for(j=0; j<J; ++j)
 			for(k=0; k<K; ++k)
@@ -1169,13 +1141,12 @@ void Diagonalize(double**A_, double** Q, double** D_)
 
 
 
-void diagonalize_and_write_covariance_tensor(double*****g, int t, int dx, int dy, int dz, int I, int J, int K)
+void diagonalize_and_write_covariance_tensor(double*****g, int dx, int dy, int dz, int I, int J, int K)
 {
 	ofstream dout, tout;
 
-	string tens = "tensor_" + to_string(t) + ".dat";
 	dout.open("diagon.dat");
-	tout.open(tens);
+	tout.open("tensor.dat");
 	
 	int i,j,k;
 
@@ -1283,13 +1254,13 @@ void SRCorrelation(double****v, double**Cor, int I, int J, int K, int N=CIRC)
 	double step = PI / N;
 	
 	double* v_s = v[I/2][J/2][K/2];
-	double* v_r = new double[3]();
+	double* v_r;
 
 	//projections
 	double v_x, v_y, v_z;
 
 
-//#pragma omp parallel for private (i,j,k, x,y, sin_theta,sin_phi, cos_theta,cos_phi, theta, phi, v_r, v_x, v_y, v_z)
+//#pragma omp parallel for private (i,j,k,x,y,sin_theta,sin_phi,cos_theta,cos_phi,theta,phi,v_r,v_x,v_y,v_z)
 	for (x = 0; x < 2*N; ++x)
 	{
 		phi += step;
@@ -1393,27 +1364,27 @@ void plot(string file_name, int I, int J, int K)
 	pclose(pipe);
 }
 
-void plot(string file_name, int X, int Y, int Z, string obstacle)
-{
-	const char* f = file_name.c_str();
-	const char* o = obstacle.c_str();
-	const char* n = (file_name + obstacle).c_str();
-	FILE * pipe = popen("gnuplot -persistent", "w");
-
-	fprintf(pipe, "reset\n");
-	fprintf(pipe, "set terminal pngcairo\n");
-	fprintf(pipe, "set output '%s.png'\n", n);
-	fprintf(pipe, "set view equal xyz\n");
-	fprintf(pipe, "set xlabel \"X\"\n");
-	fprintf(pipe, "set ylabel \"Y\"\n");
-	fprintf(pipe, "set zlabel \"Z\"\n");
-	fprintf(pipe, "set xrange [0:%i]\n",X);
-	fprintf(pipe, "set yrange [0:%i]\n",Y);
-	fprintf(pipe, "set zrange [0:%i]\n",Z);
-	fprintf(pipe, "set ticslevel 0\n");
-	fprintf(pipe, "splot \"%s\" with vectors, \"%s\" u 1:2:3 with points \n", f, o);
-	pclose(pipe);
-}
+//void plot(string file_name, string obstacle, int X, int Y, int Z)
+//{
+//	const char* f = file_name.c_str();
+//	const char* o = obstacle.c_str();
+//	const char* n = (file_name + obstacle).c_str();
+//	FILE * pipe = popen("gnuplot -persistent", "w");
+//
+//	fprintf(pipe, "reset\n");
+//	fprintf(pipe, "set terminal pngcairo\n");
+//	fprintf(pipe, "set output '%s.png'\n", n);
+//	fprintf(pipe, "set view equal xyz\n");
+//	fprintf(pipe, "set xlabel \"X\"\n");
+//	fprintf(pipe, "set ylabel \"Y\"\n");
+//	fprintf(pipe, "set zlabel \"Z\"\n");
+//	fprintf(pipe, "set xrange [0:%i]\n",X);
+//	fprintf(pipe, "set yrange [0:%i]\n",Y);
+//	fprintf(pipe, "set zrange [0:%i]\n",Z);
+//	fprintf(pipe, "set ticslevel 0\n");
+//	fprintf(pipe, "splot \"%s\" with vectors, \"%s\" u 1:2:3 with points \n", f, o);
+//	pclose(pipe);
+//}
 
 void null_struct(double**str, int N=CIRC)
 {
@@ -1445,6 +1416,7 @@ double** alocate_SRC(int I, int J, int K, int N = CIRC)
 void finalize_mean(double****v, int I, int J, int K, int dx, int dy, int dz, int div)
 {
 	int i,j,k,l;
+	int d = div * dx * dy * dz;
 #pragma omp parallel for private (i,j,k,l)
 	for(i=0; i<I; ++i)
 		for(j=0; j<J; ++j)
@@ -1520,52 +1492,32 @@ double***** allocate_Gamma(int I, int J, int K)
 			for(k=0; k < K; ++k)
 			{
 				g[i][j][k] = new double*[3];
-				for(d = 0; d < 3; ++d)
-				{
+				for(d=0; d < 3; ++d)
 					g[i][j][k][d] = new double[3]();
-				}
 			}
 		}
 	}
 	return g;
 }
 	
-void flow_in_Z(Node***a, int X, int Y, int Z)
-{
-	int x, y;
-	int z = 1;
-
-#pragma omp parallel for private (x,y)
-	for(x = 1; x < X-1; ++x)
-	{
-		for(y = 1; y < Y-1; ++y)
-		{
-			a[x][y][z].m |= dirZ;
-			a[x][y][z].p[2] |= dirZ;
-		}
-	}
-}	
-
-
 
 int main(int argc, char**argv)
 {	
-	cout << "size of node is: " << sizeof(Node) << endl;
 	//start measure time
 	time_t START = time(NULL);
 
 	//size of the grid
-	int X = 400;
-	int Y = 400;
-	int Z = 800;
+	int X = 1000;
+	int Y = 1000;
+	int Z = 1000;
 
-	int T = 3000;
+	int T = 100;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
-	int dx = 80;
-	int dy = 80;
-	int dz = 80;
+	int dx = 10;
+	int dy = 10;
+	int dz = 10;
 
 	// number of areas along X,Y,Z axes
 	int I = (X / dx);
@@ -1579,20 +1531,15 @@ int main(int argc, char**argv)
 		++K;
 
 	// radius and square of radius of the oblast
-	//int R = X/2 - 1;
-	//int R2out = R*R;
-	//int R2in = (R-2)*(R-2);
-	//++R;
-
+	int R = X/2 - 1;
+	int R2out = R*R;
+	int R2in = (R-2)*(R-2);
 
 
 	/* ALOCATE ARRAYS */
 	Node *** array = allocate_grid_array(X,Y,Z);
 	double****velocity = allocate_velocity_array(I,J,K);
 	double****mean_vel = allocate_velocity_array(I,J,K);
-
-	//double ** SRC = alocate_SRC(I,J,K);
-	//double ***** Gamma = allocate_Gamma(I,J,K);
 
 	/* NAMES OF FILES TO PLOT */
 	string file_name, file_velocity, file_mean, file_struct, file_cov;
@@ -1603,28 +1550,23 @@ int main(int argc, char**argv)
 
 
 	/* SET TUNNEL BY OBSTACLES */
-	set_tunnel(array,X,Y,Z);
+	//set_tunnel(odd,X,Y,Z);
 	//set_tunnel(even,X,Y,Z);
 
-	/* RADIUS AND MIDDLE OF THE SPHERICAL OBSTACLE AND ROUND PLATE */
-	int R = X/4;
-
-	int S = 200;
-	int Sp[3] = {X/2, Y/2, S};
-
-	int R2out = R*R;
-
 	/* SET OBSTACLES */
-	set_sphere(array,S,R,X,Y,Z);
-//	set_plate(array,S,R,X,Y,Z);
+	//set_sphere(odd,S,R,X,Y,Z);
+	//set_sphere(even,S,R,X,Y,Z);
+	//set_plate(odd,40,40,40,X,Y,Z);
+	//set_plate(even,40,40,40,X,Y,Z);
 	
-	string obstacle;
-	obstacle = write_sphere(Sp,R,X,Y,Z);
-//	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
+//	obstacle = write_sphere(S,R,X,Y,Z);
+//	obstacle = write_plate(40,40,40,X,Y,Z,dx);
 	
 	//set_initial(odd,X,Y,Z);
 	
 
+	double ** SRC = alocate_SRC(I,J,K);
+	double ***** Gamma = allocate_Gamma(I,J,K);
 	int start;
 	int div;
 
@@ -1637,14 +1579,13 @@ int main(int argc, char**argv)
 		if (!(t%10))
 		{
 			compute_velocity(array,velocity,mean_vel,dx,dy,dz,I,J,K);
-		//	SRCorrelation(velocity,SRC,I,J,K);		
-		//	covariance_tensor(velocity,Gamma,I,J,K);
-			file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
-			plot(file_name,X,Y,Z,obstacle);
+			//SRCorrelation(velocity,SRC,I,J,K);		
+			covariance_tensor(velocity,Gamma,I,J,K);
+			//file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
+			//plot(file_name,X,Y,Z);
 		}
 		if (!(t%100))
-			cout << "zatial " <<  START - time(NULL) << " sekund" << endl;
-		/*
+			cout << "zatial " <<  time(NULL) - START << " sekund" << endl;
 		if (t<=5000 && !(t%1000))
 		{
 			// prvnich 3 tisic kroku se tok ustaluje
@@ -1659,16 +1600,16 @@ int main(int argc, char**argv)
 			plot_struct(file_struct,SRC);
 
 			finalize_covariance_tensor(mean_vel,Gamma,I,J,K,div);
-			diagonalize_and_write_covariance_tensor(Gamma,t,dx,dy,dz,I,J,K);
+			diagonalize_and_write_covariance_tensor(Gamma,dx,dy,dz,I,J,K);
 
 			null_vel(mean_vel,I,J,K);
 			null_struct(SRC);
 			null_covariance_tensor(Gamma,I,J,K);
 		}
-		if (t == 15000)
+		if (t == 20000)
 		{
 			
-			div = 1000;
+			div = 1500;
 
 			finalize_mean(mean_vel,I,J,K,dx,dy,dz,div);
 			file_name = write_velocity(mean_vel, t, I,J,K, dx,dy,dz, "mean");
@@ -1679,17 +1620,15 @@ int main(int argc, char**argv)
 			plot_struct(file_struct,SRC);
 			
 			finalize_covariance_tensor(mean_vel,Gamma,I,J,K,div);
-			diagonalize_and_write_covariance_tensor(Gamma,t,dx,dy,dz,I,J,K);
+			diagonalize_and_write_covariance_tensor(Gamma,dx,dy,dz,I,J,K);
 
-			//null_vel(mean_vel,I,J,K);
-			//null_struct(SRC);
-			//null_covariance_tensor(Gamma,I,J,K);
+			null_vel(mean_vel,I,J,K);
+			null_struct(SRC);
+			null_covariance_tensor(Gamma,I,J,K);
 		}
-		*/
-	//	sphere_to_middle_flow(array, X, Y, Z, R, R2in, R2out, start);
-		flow_in_Z(array, X, Y, Z);
-		Collision(array, X, Y, Z, R, R2out, start);
-		Propagation(array, X, Y, Z, R, R2out, start);
+		sphere_to_middle_flow(array,X,Y,Z,R+1,R2in,R2out,start);
+		Collision(array,X,Y,Z,R+1,R2out,start);
+		Propagation(array,X,Y,Z,R+1,R2out,start);
 	}
 	time_t STOP = time(NULL);
 	printf("trvalo to %lu sekund\n", STOP - START);
