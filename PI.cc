@@ -1491,11 +1491,10 @@ void flow_in_Z(Node***a, int X, int Y, int Z)
 int main(int argc, char**argv)
 {	
 	//start measure time
-
 	//size of the grid
-	int X = 240;
-	int Y = 240;
-	int Z = 240;
+	int X = 380;
+	int Y = 380;
+	int Z = 380;
 
 	int T = 1000;
 
@@ -1570,13 +1569,14 @@ int main(int argc, char**argv)
 		if (!(t%10))
 		{
 			compute_velocity(array,velocity,mean_vel,dx,dy,dz,I,J,K);
+			cout << "krok " << t << " sekund " <<  time(NULL) - START <<  endl;
 		//	SRCorrelation(velocity,SRC,I,J,K);		
 		//	covariance_tensor(velocity,Gamma,I,J,K);
 		//	file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
 		//	plot(file_name,X,Y,Z);
 		}
-		if (!(t%100))
-			cout << "krok " << t << " sekund " <<  time(NULL) - START << " sekund" << endl;
+		//if (!(t%100))
+		//	cout << "krok " << t << " sekund " <<  time(NULL) - START << " sekund" << endl;
 		/*
 		if (t<=5000 && !(t%1000))
 		{
@@ -1624,8 +1624,7 @@ int main(int argc, char**argv)
 		Collision(array, X, Y, Z, start);
 		Propagation(array, X, Y, Z, start);
 	}
-	time_t STOP = time(NULL);
-	printf("trvalo to %lu sekund\n", STOP - START);
+	printf("trvalo to %lu sekund\n", time(NULL) - START);
 //	puts("este kreslim obrazky, chvilu strpenie...");
 	return 0;
 }
