@@ -255,7 +255,7 @@ int PeriodicBC(int n, int N)
 void Propagation(Node***array, int X, int Y, int Z, int start)
 {
 
-#pragma omp parallel for 
+#pragma omp parallel for
 	//prejdeme kazdy uzol mriezky
     for(int x = start; x < X; x+=2)
 	{
@@ -1491,12 +1491,11 @@ void flow_in_Z(Node***a, int X, int Y, int Z)
 int main(int argc, char**argv)
 {	
 	//start measure time
-	time_t START = time(NULL);
 
 	//size of the grid
-	int X = 150;
-	int Y = 150;
-	int Z = 150;
+	int X = 240;
+	int Y = 240;
+	int Z = 240;
 
 	int T = 1000;
 
@@ -1561,9 +1560,10 @@ int main(int argc, char**argv)
 	int start;
 	int div;
 
+	time_t START = time(NULL);
 	for (int t = 0; t <= T; ++t)
 	{
-		cout << "som v kroku " << t << endl;
+		//cout << "som v kroku " << t << endl;
 		
 		start = t & 1;
 
@@ -1572,11 +1572,11 @@ int main(int argc, char**argv)
 			compute_velocity(array,velocity,mean_vel,dx,dy,dz,I,J,K);
 		//	SRCorrelation(velocity,SRC,I,J,K);		
 		//	covariance_tensor(velocity,Gamma,I,J,K);
-			file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
-			plot(file_name,X,Y,Z);
+		//	file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
+		//	plot(file_name,X,Y,Z);
 		}
 		if (!(t%100))
-			cout << "zatial " <<  START - time(NULL) << " sekund" << endl;
+			cout << "krok " << t << " sekund " <<  time(NULL) - START << " sekund" << endl;
 		/*
 		if (t<=5000 && !(t%1000))
 		{
@@ -1626,6 +1626,6 @@ int main(int argc, char**argv)
 	}
 	time_t STOP = time(NULL);
 	printf("trvalo to %lu sekund\n", STOP - START);
-	puts("este kreslim obrazky, chvilu strpenie...");
+//	puts("este kreslim obrazky, chvilu strpenie...");
 	return 0;
 }

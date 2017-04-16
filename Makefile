@@ -1,5 +1,4 @@
 all:
-	clear
-	g++ -std=c++0x -fopenmp -O3 PI.cc
-	export OMP_NUM_THREADS=16
-	./a.out
+	g++ -std=c++0x -fopenmp PI.cc
+	export OMP_NUM_THREADS=2
+	time ./a.out > 2s
