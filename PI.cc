@@ -62,13 +62,11 @@ unsigned char Pair[3][4][2] =
 };
 
 //collision in the single node
-Node collision(Node node)
+void collision(Node &node)
 {
 	//mass
-	unsigned char m = node.m;
 	
 	//momentum
-    unsigned char *p = node.p;
 
 	//d,u ... index for downer and upper momentum
 	int d,u;
@@ -87,12 +85,12 @@ Node collision(Node node)
 			l  = Pair[i][j][0];
 			r  = Pair[i][j][1];
 			
-			ml = m&l;
-			mr = m&r;
-			ld = p[d]&l;
-			lu = p[u]&l;
-			rd = p[d]&r;
-			ru = p[u]&r;
+			ml = node.m&l;
+			mr = node.m&r;
+			ld = node.p[d]&l;
+			lu = node.p[u]&l;
+			rd = node.p[d]&r;
+			ru = node.p[u]&r;
 			
 			/* PAIR INTERACTIONS */
 			// case 6a
@@ -100,134 +98,130 @@ Node collision(Node node)
 			{
 				if (lu && ru && !ld && !rd)
 				{
-					p[d] |= l;
-					p[d] |= r;
+					node.p[d] |= l;
+					node.p[d] |= r;
 				}	
 				//case 6b
 				else if (lu && ru && ld && rd)
 				{
-					p[d] ^= l;
-					p[d] ^= r;
+					node.p[d] ^= l;
+					node.p[d] ^= r;
 				}
 				//case 7a 
 				else if (ld && !lu && ru && rd)
 				{
-					p[d] ^= l;
-					p[u] |= l;
-					p[d] ^= r;
-					p[u] ^= r;
+					node.p[d] ^= l;
+					node.p[u] |= l;
+					node.p[d] ^= r;
+					node.p[u] ^= r;
 				}
 				else if (ld && lu && !ru && rd)
 				{	
-					p[d] ^= l;
-					p[d] ^= r;
-					p[u] ^= l;
-					p[u] |= r;
+					node.p[d] ^= l;
+					node.p[d] ^= r;
+					node.p[u] ^= l;
+					node.p[u] |= r;
 				}
 				//case 7b
 				else if (!ld && lu && !ru && !rd)
 				{
-					p[d] |= l;
-					p[d] |= r;
-					p[u] ^= l;
-					p[u] |= r;
+					node.p[d] |= l;
+					node.p[d] |= r;
+					node.p[u] ^= l;
+					node.p[u] |= r;
 				}
 				else if (!ld && !lu && ru && !rd)
 				{
-					p[d] |= l;
-					p[d] |= r;
-					p[u] |= l;
-					p[u] ^= r;
+					node.p[d] |= l;
+					node.p[d] |= r;
+					node.p[u] |= l;
+					node.p[u] ^= r;
 				}
 				//case 8a
 				else if (ld && !lu && ru && !rd)
 				{
-					p[u] |= l;
-					p[u] ^= r;
+					node.p[u] |= l;
+					node.p[u] ^= r;
 				}
 				else if (!ld && lu && !ru && rd)
 				{
-					p[u] |= r;
-					p[u] ^= l;
+					node.p[u] |= r;
+					node.p[u] ^= l;
 				}
 				//case 8b  
 				else if (ld && lu && !ru && !rd)
 				{
-					p[u] |= l;
-					p[u] ^= r;
+					node.p[u] |= l;
+					node.p[u] ^= r;
 				}
 				else if (!ld && !lu && ru && rd)
 				{
-					p[u] |= r;
-					p[u] ^= l;
+					node.p[u] |= r;
+					node.p[u] ^= l;
 				}
 				//case 9a
 				else if (!ld && !lu && !ru && !rd)
 				{
-					p[d] |= l;
-					p[d] |= r;
+					node.p[d] |= l;
+					node.p[d] |= r;
 				}
 				//case 9b
 				else if (ld && rd && !lu && !ru)
 				{
-					p[d] ^= l;
-					p[d] ^= r;
+					node.p[d] ^= l;
+					node.p[d] ^= r;
 				}
 			}
 			//case 10a
 			else if (!ml && mr && ru && !rd)
 			{
-				m |= l;
-				m ^= r;
-				p[u] ^= r;
-				p[u] |= l;
-				if (p[i]&r)
+				node.m |= l;
+				node.m ^= r;
+				node.p[u] ^= r;
+				node.p[u] |= l;
+				if (node.p[i]&r)
 				{
-					p[i] ^= r;
-					p[i] |= l;
+					node.p[i] ^= r;
+					node.p[i] |= l;
 				}
 			}
 			//case 10b
 			else if (ml && !mr && lu && !ld)
 			{
-				m ^= l;
-				m |= r;
-				p[u] ^= l;
-				p[u] |= r;
-				if (p[i]&l)
+				node.m ^= l;
+				node.m |= r;
+				node.p[u] ^= l;
+				node.p[u] |= r;
+				if (node.p[i]&l)
 				{
-					p[i] ^= l;
-					p[i] |= r;
+					node.p[i] ^= l;
+					node.p[i] |= r;
 				}
 			}
 			//case 11a
 			else if (!ml && mr && !ru && !rd)
 			{
-				m |= l;
-				m ^= r;
-				if (p[i]&r)
+				node.m |= l;
+				node.m ^= r;
+				if (node.p[i]&r)
 				{
-					p[i] ^= r;
-					p[i] |= l;
+					node.p[i] ^= r;
+					node.p[i] |= l;
 				}
 			}
 			//case 11b
 			else if (ml && !mr && !lu && !ld)
 			{
-				m |= r;
-				m ^= l;
-				if (p[i]&l)
+				node.m |= r;
+				node.m ^= l;
+				if (node.p[i]&l)
 				{
-					p[i] ^= l;
-					p[i] |= r;
+					node.p[i] ^= l;
+					node.p[i] |= r;
 				}
 			}			
 		}
 	}	
-	node.m = m;
-	for(int i = 0; i < 3; ++i)
-		node.p[i] = p[i];
-	return node;
 }
 
 // we go through the whole grid and resolve collisions in nodes
@@ -242,7 +236,7 @@ void Collision(Node***array, int X, int Y, int Z, int start)
 		{
 			for(z = start; z < Z; z+=2)
 			{
-				array[x][y][z] = collision(array[x][y][z]);
+				collision(array[x][y][z]);
 			}
 		}
 	}
@@ -260,51 +254,38 @@ int PeriodicBC(int n, int N)
 // Propagate particles from nodes in array to new nodes in new_array
 void Propagation(Node***array, int X, int Y, int Z, int start)
 {
-	Node node;
-	unsigned char m;
-	unsigned char*p;
-    int x, y, z;
-	int xN, yN, zN;
-	int c, i;
 
-#pragma omp parallel for private (m, p, x, y, z, xN, yN, zN, c, i)
+#pragma omp parallel for 
 	//prejdeme kazdy uzol mriezky
-    for(x = start; x < X; x+=2)
+    for(int x = start; x < X; x+=2)
 	{
-		for(y = start; y < Y; y+=2)
+		for(int y = start; y < Y; y+=2)
 		{
-			for(z = start; z < Z; z+=2)
+			for(int z = start; z < Z; z+=2)
 			{
 				// hmotnot uzla (m je char, cize je to 8 bitov - 1 bit pre kazdu bunku v uzli)
-				m = array[x][y][z].m;
 				// hybnost uzla, je to trojica charov (tri
-				p = array[x][y][z].p;
 			
 				// we look at each cell in node
-				for (c = 0; c < 8; ++c)
+				for (int k = 1; k <= H; k <<= 1)
 				{
 					//if there is particle in the cell, we want to propagate it to corresponding node
-					if(m & cell[c])
+					if(array[x][y][z].m & k)
 					{
 						// if particle from cell[c] propagates in positive direction of X
-						if (cell[c] & dirX)
-							xN = PeriodicBC(x+1,X);
+						int xN = k & dirX ?(x+1) % X : (x-1+X) % X;
+						int yN = k & dirY ?(y+1) % Y : (y-1+Y) % Y;
+						int zN = k & dirZ ?(z+1) % Z : (z-1+Z) % Z;
 						// else particle propagates in negative direction of x
-						else
-							xN = PeriodicBC(x-1,X);
-						if (cell[c] & dirY)
-							yN = PeriodicBC(y+1,Y);
-						else
-							yN = PeriodicBC(y-1,Y);
-						if (cell[c] & dirZ)
-							zN = PeriodicBC(z+1,Z);
-						else
-							zN = PeriodicBC(z-1,Z);
 
-						array[xN][yN][zN].m |= cell[c];
-						array[xN][yN][zN].p[0] |= cell[c] & p[0];
-						array[xN][yN][zN].p[1] |= cell[c] & p[1];
-						array[xN][yN][zN].p[2] |= cell[c] & p[2];
+#pragma omp atomic
+						array[xN][yN][zN].m |= k & array[x][y][z].m;
+#pragma omp atomic
+						array[xN][yN][zN].p[0] |= k & array[x][y][z].p[0];
+#pragma omp atomic
+						array[xN][yN][zN].p[1] |= k & array[x][y][z].p[1];
+#pragma omp atomic
+						array[xN][yN][zN].p[2] |= k & array[x][y][z].p[2];
 					}
 				}
 				//in the old array, we set the node to 0
@@ -909,14 +890,12 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 {
 	double N = dx*dy*dz / 100;
 
-	int i,j,k,l;
+	int i,j,k;
 	int x,y,z;
 
-	unsigned char c;
-	unsigned char m;
-	unsigned char*p;
+	int c;
 
-#pragma omp parallel for private (i,j,k,l,x,y,z,c,m,p)
+#pragma omp parallel for private (i,j,k,x,y,z,c)
 	for (i = 0; i < I; ++i)
 	{
 		for (j = 0; j < J; ++j)
@@ -929,14 +908,11 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 					{
 						for (z = k*dz; z < (k + 1)*dz; z += 2)
 						{
-							m = array[x][y][z].m;
-							p = array[x][y][z].p;
-							for (l = 0; l < 8; ++l)
+							for (c = 1; c <= H; c <<= 1)
 							{
-								c = cell[l];
-								if (c & m)
+								if (c & array[x][y][z].m)
 								{
-									if (c & p[0])
+									if (c & array[x][y][z].p[0])
 									{
 										if (c & dirX)
 										{
@@ -947,7 +923,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 											--v[i][j][k][0];
 										}
 									}
-									if (c & p[1])
+									if (c & array[x][y][z].p[1])
 									{
 										if (c & dirY)
 										{
@@ -958,7 +934,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 											--v[i][j][k][1];
 										}
 									}
-									if (c & p[2])
+									if (c & array[x][y][z].p[2])
 									{
 										if (c & dirZ)
 										{
@@ -1514,16 +1490,15 @@ void flow_in_Z(Node***a, int X, int Y, int Z)
 
 int main(int argc, char**argv)
 {	
-	cout << "size of node is: " << sizeof(Node) << endl;
 	//start measure time
 	time_t START = time(NULL);
 
 	//size of the grid
-	int X = 240;
-	int Y = 240;
-	int Z = 240;
+	int X = 150;
+	int Y = 150;
+	int Z = 150;
 
-	int T = 2000;
+	int T = 1000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
@@ -1533,14 +1508,8 @@ int main(int argc, char**argv)
 
 	// number of areas along X,Y,Z axes
 	int I = (X / dx);
-	if (X % dx)
-		++I;
 	int J = (Y / dy);
-	if (Y % dy)
-		++J;
 	int K = (Z / dz);
-	if (Z % dz)
-		++K;
 
 	// radius and square of radius of the oblast
 	//int R = X/2 - 1;
@@ -1592,7 +1561,7 @@ int main(int argc, char**argv)
 	int start;
 	int div;
 
-	for (int t = 1; t <= T; ++t)
+	for (int t = 0; t <= T; ++t)
 	{
 		cout << "som v kroku " << t << endl;
 		
