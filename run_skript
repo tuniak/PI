@@ -1,0 +1,1 @@
+qsub -q q_1d -l mem=6gb -l nodes=1:ppn=16 skript_omp

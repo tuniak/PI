@@ -1511,7 +1511,7 @@ int main(int argc, char**argv)
 	int Y = 1000;
 	int Z = 1000;
 
-	int T = 100;
+	int T = 20000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
@@ -1565,7 +1565,7 @@ int main(int argc, char**argv)
 	//set_initial(odd,X,Y,Z);
 	
 
-	double ** SRC = alocate_SRC(I,J,K);
+	//double ** SRC = alocate_SRC(I,J,K);
 	double ***** Gamma = allocate_Gamma(I,J,K);
 	int start;
 	int div;
@@ -1595,15 +1595,15 @@ int main(int argc, char**argv)
 			file_mean = write_velocity(mean_vel,t,I,J,K,dx,dy,dz,"mean");
 			plot(file_mean,X,Y,Z);
 
-			finalize_struct(SRC,mean_vel,I,J,K,div);
-			file_struct = write_struct(SRC,t);
-			plot_struct(file_struct,SRC);
+			//finalize_struct(SRC,mean_vel,I,J,K,div);
+			//file_struct = write_struct(SRC,t);
+			//plot_struct(file_struct,SRC);
 
 			finalize_covariance_tensor(mean_vel,Gamma,I,J,K,div);
 			diagonalize_and_write_covariance_tensor(Gamma,dx,dy,dz,I,J,K);
 
 			null_vel(mean_vel,I,J,K);
-			null_struct(SRC);
+			//null_struct(SRC);
 			null_covariance_tensor(Gamma,I,J,K);
 		}
 		if (t == 20000)
@@ -1615,15 +1615,15 @@ int main(int argc, char**argv)
 			file_name = write_velocity(mean_vel, t, I,J,K, dx,dy,dz, "mean");
 			plot(file_mean,X,Y,Z);
 
-			finalize_struct(SRC,mean_vel,I,J,K,div);
-			file_struct = write_struct(SRC,t);
-			plot_struct(file_struct,SRC);
+			//finalize_struct(SRC,mean_vel,I,J,K,div);
+			//file_struct = write_struct(SRC,t);
+			//plot_struct(file_struct,SRC);
 			
 			finalize_covariance_tensor(mean_vel,Gamma,I,J,K,div);
 			diagonalize_and_write_covariance_tensor(Gamma,dx,dy,dz,I,J,K);
 
 			null_vel(mean_vel,I,J,K);
-			null_struct(SRC);
+			//null_struct(SRC);
 			null_covariance_tensor(Gamma,I,J,K);
 		}
 		sphere_to_middle_flow(array,X,Y,Z,R+1,R2in,R2out,start);
