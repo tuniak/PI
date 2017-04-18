@@ -691,7 +691,7 @@ string write_sphere(int* S, int R, int X, int Y, int Z)
 		for(phi = 0; phi < PI; phi += step)
 		{
 
-			// cos(theta) is saved to variable, so we do not need compute it twice
+			// cos(theta) is saved to variable, so we do not need c ompute it twice
 			
 			x = sX + R*cos(phi)*cos_theta;
 			
@@ -907,18 +907,15 @@ double **** allocate_velocity_array(int I, int J, int K)
 
 // we compute macroscopic limit of velocity, X,Y,Z is size of the grid; dx,dy,dz is size of area we use to mean velocity (vystredovat rychlost)
 
-void compute_velocity(Node***array, double****v, double****mean, int dx, int dy, int dz, int I, int J, int K)
+void compute_velocity(Node***array, double****v, double****mean, double*****g, int dx, int dy, int dz, int I, int J, int K)
 {
 	double N = dx*dy*dz;
 
 	int i,j,k,l;
 	int x,y,z;
+	int c;
 
-	unsigned char c;
-	unsigned char m;
-	unsigned char*p;
-
-#pragma omp parallel for private (i,j,k,l,x,y,z,c,m,p)
+#pragma omp parallel for private (i,j,k,x,y,z,c)
 	for (i = 0; i < I; ++i)
 	{
 		for (j = 0; j < J; ++j)
@@ -931,50 +928,41 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 					{
 						for (z = k*dz; z < (k + 1)*dz; z += 2)
 						{
-							m = array[x][y][z].m;
-							p = array[x][y][z].p;
-							for (l = 0; l < 8; ++l)
+							for (c = 1; c <= H; c <<= 1)
 							{
-								c = cell[l];
-								if (c & m)
+								if (c & array[x][y][z].m)
 								{
-									if (c & p[0])
+									if (c & array[x][y][z].p[0])
 									{
 										if (c & dirX)
 										{
 											++v[i][j][k][0];
-											++mean[i][j][k][0];
 										}
 										else
 										{
 											--v[i][j][k][0];
-											--mean[i][j][k][0];
 										}
 									}
-									if (c & p[1])
+									if (c & array[x][y][z].p[1])
 									{
 										if (c & dirY)
 										{
 											++v[i][j][k][1];
-											++mean[i][j][k][1];
 										}
 										else
 										{
 											--v[i][j][k][1];
-											--mean[i][j][k][1];
 										}
 									}
-									if (c & p[2])
+									if (c & array[x][y][z].p[2])
 									{
 										if (c & dirZ)
 										{
 											++v[i][j][k][2];
-											++mean[i][j][k][2];
 										}
 										else
 										{
 											--v[i][j][k][2];
-											--mean[i][j][k][2];
 										}
 									}
 								}
@@ -987,9 +975,20 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 				v[i][j][k][1] /= N;
 				v[i][j][k][2] /= N;
 
-				//mean[i][j][k][0] += v_0 / N;
-				//mean[i][j][k][1] += v_1 / N;
-				//mean[i][j][k][2] += v_2 / N;
+				mean[i][j][k][0] += v[i][j][k][0];
+				mean[i][j][k][1] += v[i][j][k][1];
+				mean[i][j][k][2] += v[i][j][k][2];
+
+				g[i][j][k][0][0] += (v[i][j][k][0]*v[i][j][k][0]);
+				g[i][j][k][0][1] += (v[i][j][k][0]*v[i][j][k][1]);
+				g[i][j][k][0][2] += (v[i][j][k][0]*v[i][j][k][2]);
+				g[i][j][k][1][0] += (v[i][j][k][1]*v[i][j][k][0]);
+				g[i][j][k][1][1] += (v[i][j][k][1]*v[i][j][k][1]);
+				g[i][j][k][1][2] += (v[i][j][k][1]*v[i][j][k][2]);
+				g[i][j][k][2][0] += (v[i][j][k][2]*v[i][j][k][0]);
+				g[i][j][k][2][1] += (v[i][j][k][2]*v[i][j][k][1]);
+				g[i][j][k][2][2] += (v[i][j][k][2]*v[i][j][k][2]);
+
 			}
 		}
 	}
@@ -1578,14 +1577,14 @@ int main(int argc, char**argv)
 
 		if (!(t%10))
 		{
-			compute_velocity(array,velocity,mean_vel,dx,dy,dz,I,J,K);
+			compute_velocity(array,velocity,mean_vel,Gamma,dx,dy,dz,I,J,K);
 			//SRCorrelation(velocity,SRC,I,J,K);		
-			covariance_tensor(velocity,Gamma,I,J,K);
+			//covariance_tensor(velocity,Gamma,I,J,K);
 			//file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
 			//plot(file_name,X,Y,Z);
 		}
 		if (!(t%100))
-			cout << "zatial " <<  time(NULL) - START << " sekund" << endl;
+			cout << "vypocet bezi " <<  time(NULL) - START << " sekund" << endl;
 		if (t<=5000 && !(t%1000))
 		{
 			// prvnich 3 tisic kroku se tok ustaluje
