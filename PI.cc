@@ -21,8 +21,11 @@
 #define H 128
 
 #define dirX (B+D+F+H)
+#define mirX (A+C+E+G)
 #define dirY (E+F+G+H)
+#define mirY (A+B+C+D)
 #define dirZ (A+B+E+F)
+#define mirZ (C+D+G+H)
 
 #define PI 3.1415926535
 
@@ -318,25 +321,16 @@ void Propagation(Node***array, int X, int Y, int Z, int R1, int R2, int start)
 
 void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R2out, int start)
 {
-//	random_device rd;
-//	mt19937 rng(rd());
-//	uniform_int_distribution<int> uni1(0,3);
-//	uniform_int_distribution<int> uni2(4,7);
-
 	int x, y, z;
 	int x1, y1, z1;
 	int x2, y2, z2;
 	int Rc;
 	
-	//int R1 = R + 1;
-	//int R2out = R*R;
-	//int R2in = (R-2)*(R-2);
 	int is    = cos(PI / 8) * R;
 	int isnot = sin(PI / 8) * R;
 	
-	int c;
 	char c1, c2;
-#pragma omp parallel for private (x,y,z,x1,y1,z1,x2,y2,z2,Rc,c,c1,c2)
+#pragma omp parallel for private (x,y,z,x1,y1,z1,x2,y2,z2,Rc,c1,c2)
 	for (x = start; x < X; x+=2)
 	{
 		x1 = x - R;
@@ -345,6 +339,8 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 		{
 			y1 = y - R;
 			y2 = pow(y1,2);
+			if(x2 + y2 >= R2out)
+				continue;
 			for (z = start; z < Z; z+=2)
 			{
 				z1 = z - R;
@@ -352,74 +348,43 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 				Rc = x2 + y2 + z2;
 				
 				// we are on the sphere with thickness 1
-				if ( Rc < R2out && Rc > R2in )
+				if ( Rc > R2in && Rc < R2out )
 				{
-					//x_hp = (x > is);
-					//x_mp = (x > )
-
 					//case 1
 					if (x1 > is)
 					{
-						for(c = 0; c < 8; c+=2)
-						{
-							a[x][y][z].m |= cell[c];
-							a[x][y][z].p[0] |= cell[c];
-						}
+						a[x][y][z].m |= mirX; 
+						a[x][y][z].p[0] |= mirX;
 					}
 					//case 2
 					else if (x1 < -is)
 					{
-						for (c = 1; c < 8; c+=2)
-						{
-							a[x][y][z].m |= cell[c];
-							a[x][y][z].p[0] |= cell[c];
-						}
+						a[x][y][z].m |= dirX; 
+						a[x][y][z].p[0] |= dirX;
 					}
 					//case 3
 					else if(y1 > is)
 					{
-						for (c = 0; c < 4; ++c)
-						{
-							a[x][y][z].m |= cell[c];
-							a[x][y][z].p[1] |= cell[c];
-						}
+						a[x][y][z].m |= mirY;
+						a[x][y][z].p[1] |= mirY;
 					}
 					//case 4
 					else if (y1 < -is)
 					{
-						for (c = 4; c < 8; ++c)
-						{
-							a[x][y][z].m |= cell[c];
-							a[x][y][z].p[1] |= cell[c];
-						}
+						a[x][y][z].m |= dirY;
+						a[x][y][z].p[1] |= dirY;
 					}
 					//case 5
 					else if (z1 > is)
 					{
-						for (c = 2; c < 4; ++c)
-						{
-							a[x][y][z].m |= cell[c];
-							a[x][y][z].p[2] |= cell[c];
-						}
-						for (c = 6; c < 8; ++c)
-						{
-							a[x][y][z].m |= cell[c];
-							a[x][y][z].p[2] |= cell[c];
-						}
+						a[x][y][z].m |= mirZ;
+						a[x][y][z].p[2] |= mirZ;
 					}
 					//case 6
 					else if (z1 < -is)
 					{
-						for (c = 0; c < 2; ++c)
-						{
-							a[x][y][z].m |= cell[c];
-							a[x][y][z].p[2] |= cell[c];
-						}
-						for (c = 4; c < 6; ++c)
-						{
-							a[x][y][z].m |= cell[c];
-							a[x][y][z].p[2] |= cell[c];
-						}
+						a[x][y][z].m |= dirZ;
+						a[x][y][z].p[2] |= dirZ;
 					}
 					else if ( x1 < isnot && x1 > -isnot )
 					{						
@@ -546,6 +511,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 					{
 						if (y1 > 0)
 						{
+							//19
 							if (z1 > 0)
 							{
 								a[x][y][z].m |= C;
@@ -553,6 +519,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 								a[x][y][z].p[1] |= C;
 								a[x][y][z].p[2] |= C;
 							}
+							//20
 							else
 							{
 								a[x][y][z].m |= A;
@@ -563,6 +530,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 						}
 						else
 						{
+							//21
 							if (z1 > 0)
 							{
 								a[x][y][z].m |= G;
@@ -570,6 +538,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 								a[x][y][z].p[1] |= G;
 								a[x][y][z].p[2] |= G;
 							}
+							//22
 							else
 							{
 								a[x][y][z].m |= E;
@@ -583,6 +552,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 					{
 						if (y1 > 0)
 						{
+							//23
 							if (z1 > 0)
 							{
 								a[x][y][z].m |= D;
@@ -590,6 +560,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 								a[x][y][z].p[1] |= D;
 								a[x][y][z].p[2] |= D;
 							}
+							//24
 							else
 							{
 								a[x][y][z].m |= B;
@@ -600,6 +571,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 						}
 						else
 						{
+							//25
 							if (z1 > 0)
 							{
 								a[x][y][z].m |= H;
@@ -607,6 +579,7 @@ void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R
 								a[x][y][z].p[1] |= H;
 								a[x][y][z].p[2] |= H;
 							}
+							//26
 							else
 							{
 								a[x][y][z].m |= F;
@@ -911,7 +884,7 @@ void compute_velocity(Node***array, double****v, double****mean, double*****g, i
 {
 	double N = dx*dy*dz;
 
-	int i,j,k,l;
+	int i,j,k;
 	int x,y,z;
 	int c;
 
