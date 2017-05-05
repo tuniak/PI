@@ -20,11 +20,14 @@
 #define H 128
 
 #define allCells (A+B+C+D+E+F+G+H)
+#define mirX (A+C+E+G)
 #define dirX (B+D+F+H)
+#define mirY (A+B+C+D)
 #define dirY (E+F+G+H)
+#define mirZ (C+D+G+H)
 #define dirZ (A+B+E+F)
 
-#define PI 3.1415926535
+#define PI M_PI
 
 #define CIRC 128
 
@@ -42,7 +45,7 @@ typedef struct
 {
 	unsigned char m;
 	unsigned char p[3];
-	int o;
+//	int o;
 } Node;
 //na obstacle by stacil char, ale 64 bitove procesory preferuju pracu s 64 bitovymi strukturami, preto sme doplnili Node na 8 bytov (4x char + 1x int = 8 bytes)
 //mohli sme stav uzlu reprezentovat aj ako char n[5], kde n[0] by bola hmotnost, n[1],n[2],n[3] by boli hybnosti a n[5] prekazka
@@ -763,7 +766,7 @@ string set_and_write_sphere(Node***a, int* s, int R, int X, int Y, int Z)
 }
 
 
-
+/*
 void set_plate(Node***a, int S, int R, int X, int Y, int Z)
 {
 	int Sx = X / 2;
@@ -787,7 +790,7 @@ void set_plate(Node***a, int S, int R, int X, int Y, int Z)
 		}
 	}
 }
-
+*/
 string write_plate(int Sx, int Sy, int z, int X, int Y, int Z, int dx)
 {
 	ofstream out;
@@ -814,7 +817,7 @@ string write_plate(int Sx, int Sy, int z, int X, int Y, int Z, int dx)
 	out.close();
 	return file_name;
 }
-
+/*
 void set_tunnel(Node***a, int X, int Y, int Z)
 {
 	for (int z = 0; z < Z; ++z)
@@ -831,7 +834,8 @@ void set_tunnel(Node***a, int X, int Y, int Z)
 		}
 	}
 }
-
+*/
+/*
 void set_sphere(Node***a, int S, int R, int X, int Y, int Z)
 {
 	int Sx = X / 2;
@@ -863,7 +867,7 @@ void set_sphere(Node***a, int S, int R, int X, int Y, int Z)
 		}
 	}
 }
-
+*/
 
 double **** allocate_velocity_array(int I, int J, int K)
 {
@@ -888,7 +892,7 @@ double **** allocate_velocity_array(int I, int J, int K)
 
 void compute_velocity(Node***array, double****v, double****mean, int dx, int dy, int dz, int I, int J, int K)
 {
-	double N = dx*dy*dz / 100;
+	double N = dx*dy*dz/20;
 
 	int i,j,k;
 	int x,y,z;
@@ -914,6 +918,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 								{
 									if (c & array[x][y][z].p[0])
 									{
+#pragma omp atomic
 										if (c & dirX)
 										{
 											++v[i][j][k][0];
@@ -925,6 +930,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 									}
 									if (c & array[x][y][z].p[1])
 									{
+#pragma omp atomic
 										if (c & dirY)
 										{
 											++v[i][j][k][1];
@@ -936,6 +942,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 									}
 									if (c & array[x][y][z].p[2])
 									{
+#pragma omp atomic
 										if (c & dirZ)
 										{
 											++v[i][j][k][2];
@@ -1469,7 +1476,81 @@ double***** allocate_Gamma(int I, int J, int K)
 	}
 	return g;
 }
+
+void set_speed(Node***a, int i, int j, int k, int dx, int dy, int dz, double vx, double vy, double vz)
+{
+	double n = 0;
+	int mx = 0;
+	int my = 0;
+	int mz = 0;
+
+	int sx = vx >= 0 ? dirX : mirX;
+    int sy = vy >= 0 ? dirY : mirY;
+	int sz = vz >= 0 ? dirZ : mirZ;
 	
+	double absx = vx >= 0 ? vx : -vx;
+	double absy = vy >= 0 ? vy : -vy;
+	double absz = vz >= 0 ? vz : -vz;
+		
+	for(int x = i; x < i + dx; x += 2)
+	{
+		for(int y = j; y < j + dy; y += 2)
+		{
+			for(int z = k; z < k + dz; z += 2)
+			{
+				n += 1;
+				if(mx / n < absx)
+				{
+					++mx;
+					a[x][y][z].m |= sx;
+					a[x][y][z].p[0] |= sx;
+				}
+				if(my / n < absy)
+				{
+					++my;
+					a[x][y][z].m |= sy;
+					a[x][y][z].p[1] |= sy;
+				}
+				if(mz / n < absz)
+				{
+					++mz;
+					a[x][y][z].m |= sz;
+					a[x][y][z].p[2] |= sz;
+				}
+			}
+		}
+	}		
+}
+
+void taylor_green_vortex(Node***a, int I, int J, int K, int X, int Y, int Z, int dx, int dy, int dz)
+{
+	double ampl = 1;
+	double kx = 2 * M_PI / I;
+	double ky = 2 * M_PI / J;
+	double kz = 2 * M_PI / K;
+	
+	double ax =  1 * ampl;
+	double ay = -1 * ampl;
+	double az =  0;
+	//double az = -2/ampl;
+	
+	double vx, vy, vz;
+
+	for (int i = 0; i < I; ++i)
+		for(int j = 0; j < J; ++j)
+			for(int k = 0; k < K; ++k)
+			{
+				// continuum equation div v = 0 implies A*kx + B*ky + C*kz = 0
+				// we chose A = 1, B = 1, C = -2 and kx=ky=kz
+				vx = ax * sin(kx * i) * cos(ky * j) * cos(kz * k);
+				vy = ay * cos(kx * i) * sin(ky * j) * cos(kz * k);
+				vz = 0;
+				//	vz = az * sin(kx * i) * sin(ky * j) * cos(kz * k);
+
+				set_speed(a, i*dx, j*dy, k*dz, dx, dy, dz, vx, vy, vz);
+			}
+}
+
 void flow_in_Z(Node***a, int X, int Y, int Z)
 {
 	int x, y;
@@ -1492,17 +1573,17 @@ int main(int argc, char**argv)
 {	
 	//start measure time
 	//size of the grid
-	int X = 380;
-	int Y = 380;
-	int Z = 380;
+	int X = 90;
+	int Y = X;
+	int Z = X;
 
-	int T = 1000;
+	int T = 6000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
 	int dx = 10;
-	int dy = 10;
-	int dz = 10;
+	int dy = dx;
+	int dz = dx;
 
 	// number of areas along X,Y,Z axes
 	int I = (X / dx);
@@ -1553,8 +1634,8 @@ int main(int argc, char**argv)
 //	obstacle = write_sphere(Sp,R,X,Y,Z);
 //	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
 	
-	set_initial(array,X,Y,Z);
-	
+	//set_initial(array,X,Y,Z);
+	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
 
 	int start;
 	int div;
@@ -1572,8 +1653,8 @@ int main(int argc, char**argv)
 			cout << "krok " << t << " sekund " <<  time(NULL) - START <<  endl;
 		//	SRCorrelation(velocity,SRC,I,J,K);		
 		//	covariance_tensor(velocity,Gamma,I,J,K);
-		//	file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
-		//	plot(file_name,X,Y,Z);
+			file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
+			plot(file_name,X,Y,Z);
 		}
 		//if (!(t%100))
 		//	cout << "krok " << t << " sekund " <<  time(NULL) - START << " sekund" << endl;
