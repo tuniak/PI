@@ -258,7 +258,7 @@ int PeriodicBC(int n, int N)
 void Propagation(Node***array, int X, int Y, int Z, int start)
 {
 
-#pragma omp parallel for
+//#pragma omp parallel for
 	//prejdeme kazdy uzol mriezky
     for(int x = start; x < X; x+=2)
 	{
@@ -281,13 +281,13 @@ void Propagation(Node***array, int X, int Y, int Z, int start)
 						int zN = k & dirZ ?(z+1) % Z : (z-1+Z) % Z;
 						// else particle propagates in negative direction of x
 
-#pragma omp atomic
+//#pragma omp atomic
 						array[xN][yN][zN].m |= k & array[x][y][z].m;
-#pragma omp atomic
+//#pragma omp atomic
 						array[xN][yN][zN].p[0] |= k & array[x][y][z].p[0];
-#pragma omp atomic
+//#pragma omp atomic
 						array[xN][yN][zN].p[1] |= k & array[x][y][z].p[1];
-#pragma omp atomic
+//#pragma omp atomic
 						array[xN][yN][zN].p[2] |= k & array[x][y][z].p[2];
 					}
 				}
@@ -1583,8 +1583,6 @@ void flow_in_Z(Node***a, int X, int Y, int Z)
 	}
 }	
 
-
-
 int main(int argc, char**argv)
 {	
 	//start measure time
@@ -1593,7 +1591,7 @@ int main(int argc, char**argv)
 	int Y = X;
 	int Z = X;
 
-	int T = 6000;
+	int T = 1000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
@@ -1656,8 +1654,6 @@ int main(int argc, char**argv)
 	int start;
 	int div;
 
-	compute_velocity(array,velocity,mean_vel,dx,dy,dz,I,J,K);
-	total_speed(velocity, I, J, K);
 	time_t START = time(NULL);
 	for (int t = 0; t <= T; ++t)
 	{
@@ -1668,6 +1664,7 @@ int main(int argc, char**argv)
 		if (!(t%10))
 		{
 			compute_velocity(array,velocity,mean_vel,dx,dy,dz,I,J,K);
+			total_speed(velocity, I, J, K);
 			cout << "krok " << t << " sekund " <<  time(NULL) - START <<  endl;
 		//	SRCorrelation(velocity,SRC,I,J,K);		
 		//	covariance_tensor(velocity,Gamma,I,J,K);
@@ -1720,7 +1717,7 @@ int main(int argc, char**argv)
 		*/
 	//	sphere_to_middle_flow(array, X, Y, Z, R, R2in, R2out, start);
 	//	flow_in_Z(array, X, Y, Z);
-		Collision(array, X, Y, Z, start);
+	//	Collision(array, X, Y, Z, start);
 		Propagation(array, X, Y, Z, start);
 	}
 	total_speed(velocity,I,J,K);
