@@ -45,7 +45,7 @@ typedef struct
 {
 	unsigned char m;
 	unsigned char p[3];
-//	int o;
+	int o;
 } Node;
 //na obstacle by stacil char, ale 64 bitove procesory preferuju pracu s 64 bitovymi strukturami, preto sme doplnili Node na 8 bytov (4x char + 1x int = 8 bytes)
 //mohli sme stav uzlu reprezentovat aj ako char n[5], kde n[0] by bola hmotnost, n[1],n[2],n[3] by boli hybnosti a n[5] prekazka
@@ -708,31 +708,30 @@ string set_and_write_sphere(Node***a, int* s, int R, int X, int Y, int Z)
 }
 
 
-/*
+
 void set_plate(Node***a, int S, int R, int X, int Y, int Z)
 {
-int Sx = X / 2;
-int Sy = Y / 2;
-int z = S;
+	int Sx = X / 2;
+	int Sy = Y / 2;
+	int z = S;
 
-int R2 = R*R;
+	int R2 = R*R;
 
-int x, y;
-int x2, y2;
+	int x, y;
+	int x2, y2;
 
-#pragma omp parallel for private (x,y,x2,y2)
-for(x = 0; x < X; ++x)
-{
-x2 = (x - Sx) * (x - Sx);
-for(y = 0; y < Y; ++y)
-{
-y2 = (y - Sy) * (y - Sy);
-if (x2 + y2 < R2)
-a[x][y][z].o = 1;
+	for(x = 0; x < X; ++x)
+	{
+		x2 = (x - Sx) * (x - Sx);
+		for(y = 0; y < Y; ++y)
+		{
+			y2 = (y - Sy) * (y - Sy);
+			if (x2 + y2 < R2)
+				a[x][y][z].o = 1;
+		}
+	}
 }
-}
-}
-*/
+
 string write_plate(int Sx, int Sy, int z, int X, int Y, int Z, int dx)
 {
 	ofstream out;
@@ -759,24 +758,24 @@ string write_plate(int Sx, int Sy, int z, int X, int Y, int Z, int dx)
 	out.close();
 	return file_name;
 }
-/*
+
 void set_tunnel(Node***a, int X, int Y, int Z)
 {
-for (int z = 0; z < Z; ++z)
-{
-for (int y = 0; y < Y; ++y)
-{
-a[0][y][z].o = 1;
-a[X-1][y][z].o = 1;
+	for (int z = 0; z < Z; ++z)
+	{
+		for (int y = 0; y < Y; ++y)
+		{
+			a[0][y][z].o = 1;
+			a[X-1][y][z].o = 1;
+		}		
+		for (int x = 0; x < X; ++x)
+		{
+			a[x][0][z].o = 1;
+			a[x][Y-1][z].o = 1;
+		}
+	}
 }
-for (int x = 0; x < X; ++x)
-{
-a[x][0][z].o = 1;
-a[x][Y-1][z].o = 1;
-}
-}
-}
-*/
+
 /*
 void set_sphere(Node***a, int S, int R, int X, int Y, int Z)
 {
