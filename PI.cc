@@ -65,172 +65,108 @@ unsigned char Pair[3][4][2] =
 };
 
 //collision in the single node
-Node collision(Node &node)
+void collision(Node &node)
 {
 	//mass
-	unsigned char m = node.m;
-	
+
 	//momentum
-    unsigned char *p = node.p;
 
 	//d,u ... index for downer and upper momentum
-	int d,u;
-    
+	int d, u;
+
 	// l, r ... left/right cell in the pair
 	// ml, mr ... particle in left/right cell is present (mass-left, mass-right)
 	// lu, ld, ru, rd ... momenta of particles (left-upper, left-downer, right-upper, right-downer)
-	unsigned char l, r, ml, mr, lu, ld, ru, rd;
+	unsigned char l, r, ml, mr, lu, ld, ru, rd, li, ri;
 
 	for (int i = 0; i < 3; ++i)
 	{
-		d = (i+1) % 3;
-		u = (i+2) % 3;
+		d = (i + 1) % 3;
+		u = (i + 2) % 3;
 		for (int j = 0; j < 4; ++j)
-		{		
-			l  = Pair[i][j][0];
-			r  = Pair[i][j][1];
-			
-			ml = m&l;
-			mr = m&r;
-			ld = p[d]&l;
-			lu = p[u]&l;
-			rd = p[d]&r;
-			ru = p[u]&r;
-			
+		{
+			l = Pair[i][j][0];
+			r = Pair[i][j][1];
+
+			ml = node.m&l;
+			mr = node.m&r;
+			ld = node.p[d] & l;
+			lu = node.p[u] & l;
+			li = node.p[i] & l;
+			rd = node.p[d] & r;
+			ru = node.p[u] & r;
+			ri = node.p[i] & r;
+
 			/* PAIR INTERACTIONS */
-			// case 6a
+			if (!ml && !mr)
+				continue;
 			if (ml && mr)
 			{
-				if (lu && ru && !ld && !rd)
+				// alternate momenta in direction of the pair-interaction
+				if (!ld && !rd)
 				{
-					p[d] |= l;
-					p[d] |= r;
-				}	
-				//case 6b
-				else if (lu && ru && ld && rd)
-				{
-					p[d] ^= l;
-					p[d] ^= r;
+					node.p[d] |= l;
+					node.p[d] |= r;
 				}
-				//case 7a 
-				else if (ld && !lu && ru && rd)
+				else if (ld && rd)
 				{
-					p[d] ^= l;
-					p[u] |= l;
-					p[d] ^= r;
-					p[u] ^= r;
+					node.p[d] ^= l;
+					node.p[d] ^= r;
 				}
-				else if (ld && lu && !ru && rd)
-				{	
-					p[d] ^= l;
-					p[d] ^= r;
-					p[u] ^= l;
-					p[u] |= r;
-				}
-				//case 7b
-				else if (!ld && lu && !ru && !rd)
+				// alternate momenta in all other directions
+				if (lu && !ru)
 				{
-					p[d] |= l;
-					p[d] |= r;
-					p[u] ^= l;
-					p[u] |= r;
+					node.p[u] ^= l;
+					node.p[u] |= r;
 				}
-				else if (!ld && !lu && ru && !rd)
+				else if (!lu && ru)
 				{
-					p[d] |= l;
-					p[d] |= r;
-					p[u] |= l;
-					p[u] ^= r;
+					node.p[u] |= l;
+					node.p[u] ^= r;
 				}
-				//case 8a
-				else if (ld && !lu && ru && !rd)
+				if (li && !ri)
 				{
-					p[u] |= l;
-					p[u] ^= r;
+					node.p[i] ^= l;
+					node.p[i] |= r;
 				}
-				else if (!ld && lu && !ru && rd)
+				else if (!li && ri)
 				{
-					p[u] |= r;
-					p[u] ^= l;
-				}
-				//case 8b  
-				else if (ld && lu && !ru && !rd)
-				{
-					p[u] |= l;
-					p[u] ^= r;
-				}
-				else if (!ld && !lu && ru && rd)
-				{
-					p[u] |= r;
-					p[u] ^= l;
-				}
-				//case 9a
-				else if (!ld && !lu && !ru && !rd)
-				{
-					p[d] |= l;
-					p[d] |= r;
-				}
-				//case 9b
-				else if (ld && rd && !lu && !ru)
-				{
-					p[d] ^= l;
-					p[d] ^= r;
+					node.p[i] |= l;
+					node.p[i] ^= r;
 				}
 			}
-			//case 10a
-			else if (!ml && mr && ru && !rd)
+			else if (!ml && !rd)
 			{
-				m |= l;
-				m ^= r;
-				p[u] ^= r;
-				p[u] |= l;
-				if (p[i]&r)
+				node.m |= l;
+				node.m ^= r;
+				if (ru)
 				{
-					p[i] ^= r;
-					p[i] |= l;
+					node.p[u] |= l;
+					node.p[u] ^= r;
+				}
+				if (ri)
+				{
+					node.p[i] |= l;
+					node.p[i] ^= r;
+				}					
+			}
+			else if (!mr && !ld)
+			{
+				node.m |= r;
+				node.m ^= l;
+				if (lu)
+				{
+					node.p[u] |= r;
+					node.p[u] ^= l;
+				}
+				if (li)
+				{
+					node.p[i] |= r;
+					node.p[i] ^= l;
 				}
 			}
-			//case 10b
-			else if (ml && !mr && lu && !ld)
-			{
-				m ^= l;
-				m |= r;
-				p[u] ^= l;
-				p[u] |= r;
-				if (p[i]&l)
-				{
-					p[i] ^= l;
-					p[i] |= r;
-				}
-			}
-			//case 11a
-			else if (!ml && mr && !ru && !rd)
-			{
-				m |= l;
-				m ^= r;
-				if (p[i]&r)
-				{
-					p[i] ^= r;
-					p[i] |= l;
-				}
-			}
-			//case 11b
-			else if (ml && !mr && !lu && !ld)
-			{
-				m |= r;
-				m ^= l;
-				if (p[i]&l)
-				{
-					p[i] ^= l;
-					p[i] |= r;
-				}
-			}			
 		}
-	}	
-	node.m = m;
-	for(int i = 0; i < 3; ++i)
-		node.p[i] = p[i];
-	return node;
+	}
 }
 
 // we go through the whole grid and resolve collisions in nodes
@@ -248,7 +184,7 @@ void Collision(Node***array, int X, int Y, int Z, int R, int R2, int start)
 			y2 = pow(y - R,2);
 			for(z = start; z < Z; z+=2)
 			{
-				z2 = (z - R,2);
+				z2 = pow(z - R,2);
 				if ( x2 + y2 + z2 < R2 )
 					collision(array[x][y][z]);
 			}
@@ -612,22 +548,7 @@ Node*** allocate_grid_array(int X, int Y, int Z)
 
 // set initial state of the grid
 // in the middle of a plain z = const, we put one particle with p[0] = 1; p[1]=p[2]=0;
-void set_initial(Node***a, int X, int Y, int Z)
-{
-			for (int x = 1; x < X-1; ++x)
-				for(int y =1; y < Y-1; ++y)
-				{
-					for (int c = 0; c < 8; ++c)
-					{
-						if(c == 0 || c == 1 || c == 4 || c == 5)
-						{
-							a[x][y][0].m |= cell[c];
-							for (int i = 0; i < 3; ++i)
-								a[x][y][0].p[i] |= cell[c];
-						}
-					}
-				}
-}
+
 
 string write_sphere(int* S, int R, int X, int Y, int Z)
 {
@@ -1486,14 +1407,13 @@ int main(int argc, char**argv)
 	int Y = 1000;
 	int Z = 1000;
 
-	int T = 20000;
+	int T = 15000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
-	int dx = 10;
-	int dy = 10;
-	int dz = 10;
-
+	int dx = 20;
+	int dy = dx;
+	int dz = dx;
 	// number of areas along X,Y,Z axes
 	int I = (X / dx);
 	if (X % dx)
@@ -1547,7 +1467,7 @@ int main(int argc, char**argv)
 
 	for (int t = 1; t <= T; ++t)
 	{
-		cout << "som v kroku " << t << endl;
+	//	cout << "som v kroku " << t << endl;
 		
 		start = t & 1;
 
@@ -1561,10 +1481,11 @@ int main(int argc, char**argv)
 		}
 		if (!(t%100))
 			cout << "vypocet bezi " <<  time(NULL) - START << " sekund" << endl;
-		if (t<=5000 && !(t%1000))
+		
+		if (t==5000)
 		{
 			// prvnich 3 tisic kroku se tok ustaluje
-			div = 100;
+			div = 500;
 			//
 			finalize_mean(mean_vel,I,J,K,dx,dy,dz,div);
 			file_mean = write_velocity(mean_vel,t,I,J,K,dx,dy,dz,"mean");
@@ -1581,10 +1502,10 @@ int main(int argc, char**argv)
 			//null_struct(SRC);
 			null_covariance_tensor(Gamma,I,J,K);
 		}
-		if (t == 20000)
+		if (t == 15000)
 		{
 			
-			div = 1500;
+			div = 1000;
 
 			finalize_mean(mean_vel,I,J,K,dx,dy,dz,div);
 			file_name = write_velocity(mean_vel, t, I,J,K, dx,dy,dz, "mean");
