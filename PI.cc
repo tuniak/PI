@@ -895,6 +895,9 @@ void compute_velocity(Node***array, double****v, double****mean, double*****g, i
 		{
 			for (k = 0; k < K; ++k)
 			{
+				v[i][j][k][0] = 0;
+				v[i][j][k][1] = 0;
+				v[i][j][k][2] = 0;
 				for (x = i*dx; x < (i + 1)*dx; x += 2)
 				{
 					for (y = j*dy; y < (j + 1)*dy; y += 2)
