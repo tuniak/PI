@@ -634,10 +634,10 @@ void set_initial(Node***a, int X, int Y, int Z)
 		for(int y = Yb; y < Ye; y+=2)
 			for (int z = Zb; z < Ze; z+=2)
 			{
-				a[x][y][z].m = allCells;
+				a[x][y][z].m = dirZ;
 				a[x][y][z].p[0] = 0;
 				a[x][y][z].p[1] = 0;
-				a[x][y][z].p[2] = 0;
+				a[x][y][z].p[2] = dirZ;
 			}
 }
 
@@ -1484,9 +1484,9 @@ void set_speed(Node***a, int i, int j, int k, int dx, int dy, int dz, double vx,
 	int my = 0;
 	int mz = 0;
 
-	int sx = vx >= 0 ? dirX : mirX;
-    int sy = vy >= 0 ? dirY : mirY;
-	int sz = vz >= 0 ? dirZ : mirZ;
+	unsigned char sx = vx >= 0 ? dirX : mirX;
+    unsigned char sy = vy >= 0 ? dirY : mirY;
+	unsigned char sz = vz >= 0 ? dirZ : mirZ;
 	
 	double absx = vx >= 0 ? vx : -vx;
 	double absy = vy >= 0 ? vy : -vy;
@@ -1549,6 +1549,22 @@ void taylor_green_vortex(Node***a, int I, int J, int K, int X, int Y, int Z, int
 
 				set_speed(a, i*dx, j*dy, k*dz, dx, dy, dz, vx, vy, vz);
 			}
+}
+
+void total_speed(double****v, int I, int J, int K)
+{
+	double x = 0;
+	double y = 0;
+	double z = 0;
+	for(int i = 0; i < I; ++i)
+		for(int j = 0; j < J; ++j)
+			for(int k = 0; k < K; ++k)
+			{
+				x += v[i][j][k][0];
+				y += v[i][j][k][1];
+				z += v[i][j][k][2];
+			}
+	cout << x << "    " << y << "    " << z << endl;
 }
 
 void flow_in_Z(Node***a, int X, int Y, int Z)
@@ -1634,12 +1650,14 @@ int main(int argc, char**argv)
 //	obstacle = write_sphere(Sp,R,X,Y,Z);
 //	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
 	
-	//set_initial(array,X,Y,Z);
-	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
+	set_initial(array,X,Y,Z);
+	//taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
 
 	int start;
 	int div;
 
+	compute_velocity(array,velocity,mean_vel,dx,dy,dz,I,J,K);
+	total_speed(velocity, I, J, K);
 	time_t START = time(NULL);
 	for (int t = 0; t <= T; ++t)
 	{
@@ -1705,6 +1723,7 @@ int main(int argc, char**argv)
 		Collision(array, X, Y, Z, start);
 		Propagation(array, X, Y, Z, start);
 	}
+	total_speed(velocity,I,J,K);
 	printf("trvalo to %lu sekund\n", time(NULL) - START);
 //	puts("este kreslim obrazky, chvilu strpenie...");
 	return 0;
