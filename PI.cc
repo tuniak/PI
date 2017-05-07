@@ -634,10 +634,10 @@ void set_initial(Node***a, int X, int Y, int Z)
 		for(int y = Yb; y < Ye; y+=2)
 			for (int z = Zb; z < Ze; z+=2)
 			{
-				a[x][y][z].m = dirZ;
+				a[x][y][z].m = dirY;
 				a[x][y][z].p[0] = 0;
-				a[x][y][z].p[1] = 0;
-				a[x][y][z].p[2] = dirZ;
+				a[x][y][z].p[1] = dirY;
+				a[x][y][z].p[2] = 0;
 			}
 }
 
@@ -906,6 +906,9 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 		{
 			for (k = 0; k < K; ++k)
 			{
+				v[i][j][k][0] = 0;
+				v[i][j][k][1] = 0;
+				v[i][j][k][2] = 0;
 				for (x = i*dx; x < (i + 1)*dx; x += 2)
 				{
 					for (y = j*dy; y < (j + 1)*dy; y += 2)
@@ -958,9 +961,9 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 					}
 				}
 
-				v[i][j][k][0] /= N;
-				v[i][j][k][1] /= N;
-				v[i][j][k][2] /= N;
+	//			v[i][j][k][0] /= N;
+	//			v[i][j][k][1] /= N;
+	//			v[i][j][k][2] /= N;
 
 				mean[i][j][k][0] += v[i][j][k][0];
 				mean[i][j][k][1] += v[i][j][k][1];
@@ -1524,7 +1527,7 @@ void set_speed(Node***a, int i, int j, int k, int dx, int dy, int dz, double vx,
 
 void taylor_green_vortex(Node***a, int I, int J, int K, int X, int Y, int Z, int dx, int dy, int dz)
 {
-	double ampl = 1;
+	double ampl = 0.5;
 	double kx = 2 * M_PI / I;
 	double ky = 2 * M_PI / J;
 	double kz = 2 * M_PI / K;
@@ -1648,8 +1651,10 @@ int main(int argc, char**argv)
 //	obstacle = write_sphere(Sp,R,X,Y,Z);
 //	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
 	
-	set_initial(array,X,Y,Z);
-	//taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
+	//set_initial(array,X,Y,Z);
+	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
+	compute_velocity(array,velocity,mean_vel,dx,dy,dz,I,J,K);
+	total_speed(velocity, I, J, K);
 
 	int start;
 	int div;
@@ -1717,7 +1722,7 @@ int main(int argc, char**argv)
 		*/
 	//	sphere_to_middle_flow(array, X, Y, Z, R, R2in, R2out, start);
 	//	flow_in_Z(array, X, Y, Z);
-	//	Collision(array, X, Y, Z, start);
+		Collision(array, X, Y, Z, start);
 		Propagation(array, X, Y, Z, start);
 	}
 	total_speed(velocity,I,J,K);
