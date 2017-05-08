@@ -31,6 +31,20 @@
 
 #define CIRC 128
 
+static unsigned long xxx=123456789, yyy=362436069, zzz=521288629;
+
+unsigned long xorshf96(void) {          //period 2^96-1
+	unsigned long t;
+	xxx ^= xxx << 16;
+	xxx ^= xxx >> 5;
+	xxx ^= xxx << 1;
+    t = xxx;
+	xxx = yyy;
+	yyy = zzz;
+	zzz = t ^ xxx ^ yyy;
+
+	return zzz;
+}
 
 //castica v bunke smeruje do uzlu, ktoreho sa tato bunka dotyka (teda do kocky s ktorou susedi rohom tejto bunky)
 //siet teda netvori cela kockova mriezka, ale iba kocky, ktore sa dotykaju rohmi, teda "kazda druha kocka"
@@ -67,24 +81,20 @@ unsigned char Pair[3][4][2] =
 //collision in the single node
 void collision(Node &node)
 {
-	//mass
-
-	//momentum
-
 	//d,u ... index for downer and upper momentum
 	int d, u;
 
-	// l, r ... left/right cell in the pair
-	// ml, mr ... particle in left/right cell is present (mass-left, mass-right)
-	// lu, ld, ru, rd ... momenta of particles (left-upper, left-downer, right-upper, right-downer)
 	unsigned char l, r, ml, mr, lu, ld, ru, rd, li, ri;
-
+	
+	long rand = xorshf96();
+	
 	for (int i = 0; i < 3; ++i)
 	{
 		d = (i + 1) % 3;
 		u = (i + 2) % 3;
 		for (int j = 0; j < 4; ++j)
 		{
+
 			l = Pair[i][j][0];
 			r = Pair[i][j][1];
 
@@ -105,38 +115,63 @@ void collision(Node &node)
 				// alternate momenta in direction of the pair-interaction
 				if (!ld && !rd)
 				{
-					node.p[d] |= l;
-					node.p[d] |= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[d] |= l;
+						node.p[d] |= r;
+					}
 				}
 				else if (ld && rd)
 				{
-					node.p[d] ^= l;
-					node.p[d] ^= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[d] ^= l;
+						node.p[d] ^= r;
+					}
 				}
 				// alternate momenta in all other directions
 				if (lu && !ru)
 				{
-					node.p[u] ^= l;
-					node.p[u] |= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[u] ^= l;
+						node.p[u] |= r;
+					}
 				}
 				else if (!lu && ru)
 				{
-					node.p[u] |= l;
-					node.p[u] ^= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[u] |= l;
+						node.p[u] ^= r;
+					}
 				}
 				if (li && !ri)
 				{
+					rand >>= 1;
+					if(rand & 1)
+						continue;
 					node.p[i] ^= l;
 					node.p[i] |= r;
 				}
 				else if (!li && ri)
 				{
+					rand >>= 1;
+					if(rand & 1)
+						continue;
 					node.p[i] |= l;
 					node.p[i] ^= r;
 				}
 			}
 			else if (!ml && !rd)
 			{
+				rand >>= 1;
+				if(rand & 1)
+					continue;
 				node.m |= l;
 				node.m ^= r;
 				if (ru)
@@ -152,6 +187,9 @@ void collision(Node &node)
 			}
 			else if (!mr && !ld)
 			{
+				rand >>= 1;
+				if(rand & 1)
+					continue;
 				node.m |= r;
 				node.m ^= l;
 				if (lu)
@@ -1538,7 +1576,7 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 640;
+	int X = 320;
 	int Y = X;
 	int Z = X;
 
