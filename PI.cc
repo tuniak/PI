@@ -1538,7 +1538,7 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 640;
+	int X = 320;
 	int Y = X;
 	int Z = X;
 
