@@ -223,13 +223,13 @@ void Propagation(Node***array, int X, int Y, int Z, int start)
 						int zN = k & dirZ ? (z + 1) % Z : (z - 1 + Z) % Z;
 						// else particle propagates in negative direction of x
 
-						#pragma omp atomic
+#pragma omp atomic
 						array[xN][yN][zN].m |= k & array[x][y][z].m;
-						#pragma omp atomic
+#pragma omp atomic
 						array[xN][yN][zN].p[0] |= k & array[x][y][z].p[0];
-						#pragma omp atomic
+#pragma omp atomic
 						array[xN][yN][zN].p[1] |= k & array[x][y][z].p[1];
-						#pragma omp atomic
+#pragma omp atomic
 						array[xN][yN][zN].p[2] |= k & array[x][y][z].p[2];
 					}
 				}
@@ -834,12 +834,16 @@ double **** allocate_velocity_array(int I, int J, int K)
 
 void compute_velocity(Node***array, double****v, double****mean, int dx, int dy, int dz, int I, int J, int K)
 {
-	double N = dx*dy*dz / 50;
+	ofstream out;
+	out.open("Energy", ofstream::out | ofstream::app );
+	double Energy = 0;
+	double N = dx*dy*dz / 80;
 
 	int i, j, k;
 	int x, y, z;
 
 	int c;
+	int partnum;
 
 #pragma omp parallel for private (i,j,k,x,y,z,c)
 	for (i = 0; i < I; ++i)
@@ -848,6 +852,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 		{
 			for (k = 0; k < K; ++k)
 			{
+				partnum = 0;
 				v[i][j][k][0] = 0;
 				v[i][j][k][1] = 0;
 				v[i][j][k][2] = 0;
@@ -861,6 +866,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 							{
 								if (c & array[x][y][z].m)
 								{
+									++partnum;
 									if (c & array[x][y][z].p[0])
 									{
 										if (c & dirX)
@@ -900,9 +906,11 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 					}
 				}
 
-							v[i][j][k][0] /= N;
-							v[i][j][k][1] /= N;
-							v[i][j][k][2] /= N;
+				v[i][j][k][0] /= N;
+				v[i][j][k][1] /= N;
+				v[i][j][k][2] /= N;
+
+				Energy += 0.0001 * partnum * (v[i][j][k][0]*v[i][j][k][0] + v[i][j][k][1]*v[i][j][k][1] + v[i][j][k][2]*v[i][j][k][2]);
 
 				mean[i][j][k][0] += v[i][j][k][0];
 				mean[i][j][k][1] += v[i][j][k][1];
@@ -910,6 +918,9 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 			}
 		}
 	}
+	cout << "Energy is " << Energy << endl;
+	out << Energy << endl;
+	out.close();
 }
 
 
@@ -1464,7 +1475,7 @@ void set_speed(Node***a, int i, int j, int k, int dx, int dy, int dz, double vx,
 
 void taylor_green_vortex(Node***a, int I, int J, int K, int X, int Y, int Z, int dx, int dy, int dz)
 {
-	double ampl = 0.5;
+	double ampl = 1.0;
 	double kx = 2 * PI / I;
 	double ky = 2 * PI / J;
 	double kz = 2 * PI / K;
@@ -1527,7 +1538,7 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 120;
+	int X = 640;
 	int Y = X;
 	int Z = X;
 
@@ -1601,7 +1612,7 @@ int main(int argc, char**argv)
 
 		start = t & 1;
 
-		if (!(t % 4))
+		if (!(t % 2))
 		{
 			compute_velocity(array, velocity, mean_vel, dx, dy, dz, I, J, K);
 			total_speed(velocity, I, J, K);
