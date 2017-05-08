@@ -948,6 +948,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 				v[i][j][k][1] /= N;
 				v[i][j][k][2] /= N;
 
+#pragma omp atomic
 				Energy += 0.0001 * partnum * (v[i][j][k][0]*v[i][j][k][0] + v[i][j][k][1]*v[i][j][k][1] + v[i][j][k][2]*v[i][j][k][2]);
 
 				mean[i][j][k][0] += v[i][j][k][0];
@@ -1576,11 +1577,11 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 320;
+	int X = 120;
 	int Y = X;
 	int Z = X;
 
-	int T = 200;
+	int T = 700;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
