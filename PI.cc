@@ -910,6 +910,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 				v[i][j][k][1] /= N;
 				v[i][j][k][2] /= N;
 
+#pragma omp atomic
 				Energy += 0.0001 * partnum * (v[i][j][k][0]*v[i][j][k][0] + v[i][j][k][1]*v[i][j][k][1] + v[i][j][k][2]*v[i][j][k][2]);
 
 				mean[i][j][k][0] += v[i][j][k][0];
@@ -1542,11 +1543,11 @@ int main(int argc, char**argv)
 	int Y = X;
 	int Z = X;
 
-	int T = 300;
+	int T = 2000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
-	int dx = 20;
+	int dx = 10;
 	int dy = dx;
 	int dz = dx;
 
@@ -1599,8 +1600,8 @@ int main(int argc, char**argv)
 	//	obstacle = write_sphere(Sp,R,X,Y,Z);
 	//	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
 
-//	set_initial(array,X,Y,Z);
-	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
+	set_initial(array,X,Y,Z);
+	//taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
 
 	int start;
 	int div;
