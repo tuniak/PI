@@ -1577,11 +1577,11 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 240;
+	int X = 320;
 	int Y = X;
 	int Z = X;
 
-	int T = 2000;
+	int T = 1000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
@@ -1638,12 +1638,14 @@ int main(int argc, char**argv)
 	//	obstacle = write_sphere(Sp,R,X,Y,Z);
 	//	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
 
-	set_initial(array,X,Y,Z);
-//	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
+//	set_initial(array,X,Y,Z);
+	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
 
 	int start;
 	int div;
 
+	ofstream out;
+	out.open("1core_320");
 	time_t START = time(NULL);
 	for (int t = 0; t <= T; ++t)
 	{
@@ -1651,15 +1653,20 @@ int main(int argc, char**argv)
 
 		start = t & 1;
 
-		if (!(t % 2))
+		if(!(t % 20))
+		{
+			cout << "step: " << t << " time: " << time(NULL) - START << endl;
+			out <<  t << "\t" << time(NULL) - START << endl;
+		}
+		if (!(t % 10))
 		{
 			compute_velocity(array, velocity, mean_vel, dx, dy, dz, I, J, K);
-			total_speed(velocity, I, J, K);
-			cout << "krok " << t << " sekund " << time(NULL) - START << endl;
+		//	total_speed(velocity, I, J, K);
+		//	cout << "krok " << t << " sekund " << time(NULL) - START << endl;
 			//	SRCorrelation(velocity,SRC,I,J,K);		
 			//	covariance_tensor(velocity,Gamma,I,J,K);
-			file_name = write_velocity(velocity, t, I, J, K, dx, dy, dz);
-			plot(file_name, X, Y, Z);
+		//	file_name = write_velocity(velocity, t, I, J, K, dx, dy, dz);
+		//	plot(file_name, X, Y, Z);
 		}
 		//if (!(t%100))
 		//	cout << "krok " << t << " sekund " <<  time(NULL) - START << " sekund" << endl;
@@ -1710,7 +1717,7 @@ int main(int argc, char**argv)
 		Collision(array, X, Y, Z, start);
 		Propagation(array, X, Y, Z, start);
 	}
-	total_speed(velocity, I, J, K);
+	out.close();
 	printf("trvalo to %lu sekund\n", time(NULL) - START);
 	//	puts("este kreslim obrazky, chvilu strpenie...");
 	return 0;
