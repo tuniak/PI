@@ -1577,11 +1577,11 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 640;
+	int X = 240;
 	int Y = X;
 	int Z = X;
 
-	int T = 300;
+	int T = 2000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
@@ -1638,8 +1638,8 @@ int main(int argc, char**argv)
 	//	obstacle = write_sphere(Sp,R,X,Y,Z);
 	//	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
 
-//	set_initial(array,X,Y,Z);
-	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
+	set_initial(array,X,Y,Z);
+//	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
 
 	int start;
 	int div;
