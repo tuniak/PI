@@ -27,7 +27,7 @@
 #define mirZ (C+D+G+H)
 #define dirZ (A+B+E+F)
 
-#define PI 3.141592 //M_PI
+#define PI M_PI
 
 #define CIRC 128
 
@@ -837,7 +837,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 	ofstream out;
 	out.open("Energy", ofstream::out | ofstream::app );
 	double Energy = 0;
-	double N = dx*dy*dz / 80;
+	double N = dx*dy*dz / 30;
 
 	int i, j, k;
 	int x, y, z;
@@ -1538,15 +1538,15 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 320;
+	int X = 240;
 	int Y = X;
 	int Z = X;
 
-	int T = 200;
+	int T = 300;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
-	int dx = 10;
+	int dx = 20;
 	int dy = dx;
 	int dz = dx;
 
