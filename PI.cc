@@ -875,7 +875,7 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 	ofstream out;
 	out.open("Energy", ofstream::out | ofstream::app );
 	double Energy = 0;
-	double N = dx*dy*dz / 80;
+	double N = dx*dy*dz / 30;
 
 	int i, j, k;
 	int x, y, z;
@@ -1577,11 +1577,11 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 120;
+	int X = 640;
 	int Y = X;
 	int Z = X;
 
-	int T = 700;
+	int T = 300;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
