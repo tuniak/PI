@@ -27,7 +27,7 @@
 #define mirZ (C+D+G+H)
 #define dirZ (A+B+E+F)
 
-#define PI 3.141592 //M_PI
+#define PI M_PI
 
 #define CIRC 128
 
@@ -79,14 +79,14 @@ unsigned char Pair[3][4][2] =
 };
 
 //collision in the single node
-void collision(Node &node)
+void collision(Node &node, long ran)
 {
 	//d,u ... index for downer and upper momentum
 	int d, u;
 
 	unsigned char l, r, ml, mr, lu, ld, ru, rd, li, ri;
 	
-	long rand = xorshf96();
+	//long ran = xorshf96();
 	
 	for (int i = 0; i < 3; ++i)
 	{
@@ -115,8 +115,8 @@ void collision(Node &node)
 				// alternate momenta in direction of the pair-interaction
 				if (!ld && !rd)
 				{
-					rand >>= 1;
-					if(rand & 1)
+					ran >>= 1;
+					if(ran & 1)
 					{
 						node.p[d] |= l;
 						node.p[d] |= r;
@@ -124,8 +124,8 @@ void collision(Node &node)
 				}
 				else if (ld && rd)
 				{
-					rand >>= 1;
-					if(rand & 1)
+					ran >>= 1;
+					if(ran & 1)
 					{
 						node.p[d] ^= l;
 						node.p[d] ^= r;
@@ -134,8 +134,8 @@ void collision(Node &node)
 				// alternate momenta in all other directions
 				if (lu && !ru)
 				{
-					rand >>= 1;
-					if(rand & 1)
+					ran >>= 1;
+					if(ran & 1)
 					{
 						node.p[u] ^= l;
 						node.p[u] |= r;
@@ -143,8 +143,8 @@ void collision(Node &node)
 				}
 				else if (!lu && ru)
 				{
-					rand >>= 1;
-					if(rand & 1)
+					ran >>= 1;
+					if(ran & 1)
 					{
 						node.p[u] |= l;
 						node.p[u] ^= r;
@@ -152,16 +152,16 @@ void collision(Node &node)
 				}
 				if (li && !ri)
 				{
-					rand >>= 1;
-					if(rand & 1)
+					ran >>= 1;
+					if(ran & 1)
 						continue;
 					node.p[i] ^= l;
 					node.p[i] |= r;
 				}
 				else if (!li && ri)
 				{
-					rand >>= 1;
-					if(rand & 1)
+					ran >>= 1;
+					if(ran & 1)
 						continue;
 					node.p[i] |= l;
 					node.p[i] ^= r;
@@ -169,8 +169,8 @@ void collision(Node &node)
 			}
 			else if (!ml && !rd)
 			{
-				rand >>= 1;
-				if(rand & 1)
+				ran >>= 1;
+				if(ran & 1)
 					continue;
 				node.m |= l;
 				node.m ^= r;
@@ -187,8 +187,8 @@ void collision(Node &node)
 			}
 			else if (!mr && !ld)
 			{
-				rand >>= 1;
-				if(rand & 1)
+				ran >>= 1;
+				if(ran & 1)
 					continue;
 				node.m |= r;
 				node.m ^= l;
@@ -219,7 +219,7 @@ void Collision(Node***array, int X, int Y, int Z, int start)
 		{
 			for (z = start; z < Z; z += 2)
 			{
-				collision(array[x][y][z]);
+				collision(array[x][y][z],xorshf96());
 			}
 		}
 	}
@@ -1577,11 +1577,11 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 320;
+	int X = 500;
 	int Y = X;
 	int Z = X;
 
-	int T = 1000;
+	int T = 500;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
@@ -1645,7 +1645,7 @@ int main(int argc, char**argv)
 	int div;
 
 	ofstream out;
-	out.open("1core_320");
+	out.open("strong_32core_500");
 	time_t START = time(NULL);
 	for (int t = 0; t <= T; ++t)
 	{
