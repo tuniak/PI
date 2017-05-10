@@ -1539,7 +1539,7 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 500;
+	int X = 800;
 	int Y = X;
 	int Z = X;
 
@@ -1600,14 +1600,14 @@ int main(int argc, char**argv)
 	//	obstacle = write_sphere(Sp,R,X,Y,Z);
 	//	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
 
-	set_initial(array,X,Y,Z);
-	//taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
+	//set_initial(array,X,Y,Z);
+	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
 
 	int start;
 	int div;
 
 	ofstream out;
-	out.open("detrong_1");
+	out.open("deweak_8");
 
 	time_t START = time(NULL);
 	for (int t = 0; t <= T; ++t)
@@ -1618,7 +1618,8 @@ int main(int argc, char**argv)
 
 		if (!(t % 20))
 		{
-			cout
+			out << t << "\t" << time(NULL) - START << endl;
+			cout << "krok: " << t << " cas: " << time(NULL) - START <<  endl;
 		}
 		if (!(t % 10))
 		{
