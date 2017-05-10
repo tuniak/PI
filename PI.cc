@@ -1539,11 +1539,11 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 240;
+	int X = 500;
 	int Y = X;
 	int Z = X;
 
-	int T = 2000;
+	int T = 500;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
@@ -1606,6 +1606,9 @@ int main(int argc, char**argv)
 	int start;
 	int div;
 
+	ofstream out;
+	out.open("detrong_1");
+
 	time_t START = time(NULL);
 	for (int t = 0; t <= T; ++t)
 	{
@@ -1613,15 +1616,19 @@ int main(int argc, char**argv)
 
 		start = t & 1;
 
-		if (!(t % 2))
+		if (!(t % 20))
+		{
+			cout
+		}
+		if (!(t % 10))
 		{
 			compute_velocity(array, velocity, mean_vel, dx, dy, dz, I, J, K);
-			total_speed(velocity, I, J, K);
-			cout << "krok " << t << " sekund " << time(NULL) - START << endl;
+			//total_speed(velocity, I, J, K);
+			//cout << "krok " << t << " sekund " << time(NULL) - START << endl;
 			//	SRCorrelation(velocity,SRC,I,J,K);		
 			//	covariance_tensor(velocity,Gamma,I,J,K);
-			file_name = write_velocity(velocity, t, I, J, K, dx, dy, dz);
-			plot(file_name, X, Y, Z);
+		//	file_name = write_velocity(velocity, t, I, J, K, dx, dy, dz);
+		//	plot(file_name, X, Y, Z);
 		}
 		//if (!(t%100))
 		//	cout << "krok " << t << " sekund " <<  time(NULL) - START << " sekund" << endl;
