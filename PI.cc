@@ -27,10 +27,25 @@
 #define dirZ (A+B+E+F)
 #define mirZ (C+D+G+H)
 
-#define PI 3.1415926535
+#define PI M_PI
 
 #define CIRC 128
 
+
+static unsigned long xxx=123456789, yyy=362436069, zzz=521288629;
+
+unsigned long xorshf96(void) {          //period 2^96-1
+	unsigned long t;
+	xxx ^= xxx << 16;
+	xxx ^= xxx >> 5;
+	xxx ^= xxx << 1;
+    t = xxx;
+	xxx = yyy;
+	yyy = zzz;
+	zzz = t ^ xxx ^ yyy;
+
+	return zzz;
+}
 
 //castica v bunke smeruje do uzlu, ktoreho sa tato bunka dotyka (teda do kocky s ktorou susedi rohom tejto bunky)
 //siet teda netvori cela kockova mriezka, ale iba kocky, ktore sa dotykaju rohmi, teda "kazda druha kocka"
@@ -65,26 +80,21 @@ unsigned char Pair[3][4][2] =
 };
 
 //collision in the single node
-void collision(Node &node)
+void collision(Node &node, long rand)
 {
-	//mass
-
-	//momentum
-
 	//d,u ... index for downer and upper momentum
 	int d, u;
 
-	// l, r ... left/right cell in the pair
-	// ml, mr ... particle in left/right cell is present (mass-left, mass-right)
-	// lu, ld, ru, rd ... momenta of particles (left-upper, left-downer, right-upper, right-downer)
 	unsigned char l, r, ml, mr, lu, ld, ru, rd, li, ri;
-
+	
+	
 	for (int i = 0; i < 3; ++i)
 	{
 		d = (i + 1) % 3;
 		u = (i + 2) % 3;
 		for (int j = 0; j < 4; ++j)
 		{
+
 			l = Pair[i][j][0];
 			r = Pair[i][j][1];
 
@@ -105,38 +115,63 @@ void collision(Node &node)
 				// alternate momenta in direction of the pair-interaction
 				if (!ld && !rd)
 				{
-					node.p[d] |= l;
-					node.p[d] |= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[d] |= l;
+						node.p[d] |= r;
+					}
 				}
 				else if (ld && rd)
 				{
-					node.p[d] ^= l;
-					node.p[d] ^= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[d] ^= l;
+						node.p[d] ^= r;
+					}
 				}
 				// alternate momenta in all other directions
 				if (lu && !ru)
 				{
-					node.p[u] ^= l;
-					node.p[u] |= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[u] ^= l;
+						node.p[u] |= r;
+					}
 				}
 				else if (!lu && ru)
 				{
-					node.p[u] |= l;
-					node.p[u] ^= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[u] |= l;
+						node.p[u] ^= r;
+					}
 				}
 				if (li && !ri)
 				{
+					rand >>= 1;
+					if(rand & 1)
+						continue;
 					node.p[i] ^= l;
 					node.p[i] |= r;
 				}
 				else if (!li && ri)
 				{
+					rand >>= 1;
+					if(rand & 1)
+						continue;
 					node.p[i] |= l;
 					node.p[i] ^= r;
 				}
 			}
 			else if (!ml && !rd)
 			{
+				rand >>= 1;
+				if(rand & 1)
+					continue;
 				node.m |= l;
 				node.m ^= r;
 				if (ru)
@@ -152,6 +187,9 @@ void collision(Node &node)
 			}
 			else if (!mr && !ld)
 			{
+				rand >>= 1;
+				if(rand & 1)
+					continue;
 				node.m |= r;
 				node.m ^= l;
 				if (lu)
@@ -182,11 +220,13 @@ void Collision(Node***array, int X, int Y, int Z, int R, int R2, int start)
 		for(y = start; y < Y; y+=2)
 		{
 			y2 = pow(y - R,2);
+			if(x2 + y2 >= R2)
+				continue;
 			for(z = start; z < Z; z+=2)
 			{
 				z2 = pow(z - R,2);
 				if ( x2 + y2 + z2 < R2 )
-					collision(array[x][y][z]);
+					collision(array[x][y][z],xorshf96());
 			}
 		}
 	}
@@ -217,6 +257,8 @@ void Propagation(Node***array, int X, int Y, int Z, int R1, int R2, int start)
 		for(y = start; y < Y; y+=2)
 		{
 			y2 = pow(y - R1,2);
+			if(x2 + y2 >= R2)
+				continue;
 			for(z = start; z < Z; z+=2)
 			{
 				z2 = pow(z - R1,2);
@@ -1041,13 +1083,13 @@ void diagonalize_and_write_covariance_tensor(double*****g, int dx, int dy, int d
 {
 	ofstream dout, tout;
 
-	dout.open("diagon.dat");
+	//dout.open("diagon.dat");
 	tout.open("tensor.dat");
 	
 	int i,j,k;
-
 	double**AA;
 	
+/*
 	double** Q = new double*[3];
 	for(i=0; i<3; ++i)
 		Q[i] = new double[3]();
@@ -1055,18 +1097,18 @@ void diagonalize_and_write_covariance_tensor(double*****g, int dx, int dy, int d
 	double** DD = new double*[3];
 	for(i=0; i<3; ++i)
 		DD[i] = new double[3]();
-
+*/
 	for(i=0; i<I; ++i)
 		for(j=0; j<J; ++j)
 			for(k=0; k<K; ++k)
 			{
 				AA = g[i][j][k];
-				Diagonalize(AA,Q,DD);
-				dout << dx/2 + i*dx << "\t" << dy/2 + j*dy << "\t" << dz/2 + k*dz << "\t" << DD[0][0] << "\t" << DD[1][1] << "\t" << DD[2][2] << endl;
+				//Diagonalize(AA,Q,DD);
+				//dout << dx/2 + i*dx << "\t" << dy/2 + j*dy << "\t" << dz/2 + k*dz << "\t" << DD[0][0] << "\t" << DD[1][1] << "\t" << DD[2][2] << endl;
 				tout << dx/2 + i*dx << "\t" << dy/2 + j*dy << "\t" << dz/2 + k*dz << "\t" << AA[0][0] << "\t" << AA[0][1] << "\t" << AA[0][2] << "\t" << AA[1][0] << "\t" << AA[1][1] << "\t" << AA[1][2] << "\t" << AA[2][0] << "\t" << AA[2][1] << "\t" << AA[2][2] <<  endl;
 			}
 	
-	dout.close();
+//	dout.close();
 	tout.close();
 }
 
@@ -1403,17 +1445,18 @@ int main(int argc, char**argv)
 	time_t START = time(NULL);
 
 	//size of the grid
-	int X = 1000;
-	int Y = 1000;
-	int Z = 1000;
+	int X = 600;
+	int Y = 600;
+	int Z = 600;
 
-	int T = 15000;
+	int T = 6000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
-	int dx = 20;
-	int dy = dx;
-	int dz = dx;
+	int dx = 10;
+	int dy = 10;
+	int dz = 10;
+
 	// number of areas along X,Y,Z axes
 	int I = (X / dx);
 	if (X % dx)
@@ -1467,7 +1510,7 @@ int main(int argc, char**argv)
 
 	for (int t = 1; t <= T; ++t)
 	{
-	//	cout << "som v kroku " << t << endl;
+		cout << "som v kroku " << t << endl;
 		
 		start = t & 1;
 
@@ -1482,10 +1525,10 @@ int main(int argc, char**argv)
 		if (!(t%100))
 			cout << "vypocet bezi " <<  time(NULL) - START << " sekund" << endl;
 		
-		if (t==5000)
+		if (t==2000)
 		{
 			// prvnich 3 tisic kroku se tok ustaluje
-			div = 500;
+			div = 200;
 			//
 			finalize_mean(mean_vel,I,J,K,dx,dy,dz,div);
 			file_mean = write_velocity(mean_vel,t,I,J,K,dx,dy,dz,"mean");
@@ -1502,10 +1545,10 @@ int main(int argc, char**argv)
 			//null_struct(SRC);
 			null_covariance_tensor(Gamma,I,J,K);
 		}
-		if (t == 15000)
+		if (t == 4000)
 		{
 			
-			div = 1000;
+			div = 200;
 
 			finalize_mean(mean_vel,I,J,K,dx,dy,dz,div);
 			file_name = write_velocity(mean_vel, t, I,J,K, dx,dy,dz, "mean");
