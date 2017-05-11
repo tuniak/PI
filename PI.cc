@@ -27,10 +27,25 @@
 #define mirZ (C+D+G+H)
 #define dirZ (A+B+E+F)
 
-#define PI 3.141592 //M_PI
+#define PI M_PI
 
 #define CIRC 128
 
+
+static unsigned long xxx=123456789, yyy=362436069, zzz=521288629;
+
+unsigned long xorshf96(void) {          //period 2^96-1
+	unsigned long t;
+	xxx ^= xxx << 16;
+	xxx ^= xxx >> 5;
+	xxx ^= xxx << 1;
+    t = xxx;
+	xxx = yyy;
+	yyy = zzz;
+	zzz = t ^ xxx ^ yyy;
+
+	return zzz;
+}
 
 //castica v bunke smeruje do uzlu, ktoreho sa tato bunka dotyka (teda do kocky s ktorou susedi rohom tejto bunky)
 //siet teda netvori cela kockova mriezka, ale iba kocky, ktore sa dotykaju rohmi, teda "kazda druha kocka"
@@ -65,26 +80,21 @@ unsigned char Pair[3][4][2] =
 };
 
 //collision in the single node
-void collision(Node &node)
+void collision(Node &node, long rand)
 {
-	//mass
-
-	//momentum
-
 	//d,u ... index for downer and upper momentum
 	int d, u;
 
-	// l, r ... left/right cell in the pair
-	// ml, mr ... particle in left/right cell is present (mass-left, mass-right)
-	// lu, ld, ru, rd ... momenta of particles (left-upper, left-downer, right-upper, right-downer)
 	unsigned char l, r, ml, mr, lu, ld, ru, rd, li, ri;
-
+	
+	
 	for (int i = 0; i < 3; ++i)
 	{
 		d = (i + 1) % 3;
 		u = (i + 2) % 3;
 		for (int j = 0; j < 4; ++j)
 		{
+
 			l = Pair[i][j][0];
 			r = Pair[i][j][1];
 
@@ -105,38 +115,63 @@ void collision(Node &node)
 				// alternate momenta in direction of the pair-interaction
 				if (!ld && !rd)
 				{
-					node.p[d] |= l;
-					node.p[d] |= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[d] |= l;
+						node.p[d] |= r;
+					}
 				}
 				else if (ld && rd)
 				{
-					node.p[d] ^= l;
-					node.p[d] ^= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[d] ^= l;
+						node.p[d] ^= r;
+					}
 				}
 				// alternate momenta in all other directions
 				if (lu && !ru)
 				{
-					node.p[u] ^= l;
-					node.p[u] |= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[u] ^= l;
+						node.p[u] |= r;
+					}
 				}
 				else if (!lu && ru)
 				{
-					node.p[u] |= l;
-					node.p[u] ^= r;
+					rand >>= 1;
+					if(rand & 1)
+					{
+						node.p[u] |= l;
+						node.p[u] ^= r;
+					}
 				}
 				if (li && !ri)
 				{
+					rand >>= 1;
+					if(rand & 1)
+						continue;
 					node.p[i] ^= l;
 					node.p[i] |= r;
 				}
 				else if (!li && ri)
 				{
+					rand >>= 1;
+					if(rand & 1)
+						continue;
 					node.p[i] |= l;
 					node.p[i] ^= r;
 				}
 			}
 			else if (!ml && !rd)
 			{
+				rand >>= 1;
+				if(rand & 1)
+					continue;
 				node.m |= l;
 				node.m ^= r;
 				if (ru)
@@ -152,6 +187,9 @@ void collision(Node &node)
 			}
 			else if (!mr && !ld)
 			{
+				rand >>= 1;
+				if(rand & 1)
+					continue;
 				node.m |= r;
 				node.m ^= l;
 				if (lu)
@@ -181,7 +219,9 @@ void Collision(Node***array, int X, int Y, int Z, int start)
 		{
 			for (z = start; z < Z; z += 2)
 			{
-				collision(array[x][y][z]);
+				if(array[x][y][z].o)
+					continue;
+				collision(array[x][y][z], xorshf96());
 			}
 		}
 	}
@@ -206,7 +246,7 @@ void Propagation(Node***array, int X, int Y, int Z, int start)
 	{
 		for (int y = start; y < Y; y += 2)
 		{
-			for (int z = start; z < Z; z += 2)
+			for (int z = 2-start; z < Z-1; z += 2)
 			{
 				// hmotnot uzla (m je char, cize je to 8 bitov - 1 bit pre kazdu bunku v uzli)
 				// hybnost uzla, je to trojica charov (tri
@@ -223,6 +263,35 @@ void Propagation(Node***array, int X, int Y, int Z, int start)
 						int zN = k & dirZ ? (z + 1) % Z : (z - 1 + Z) % Z;
 						// else particle propagates in negative direction of x
 
+						if(array[xN][yN][zN].o)
+						{
+							unsigned char kk;
+							if(k&A)
+								kk=H;
+							if(k&B)
+								kk=G;
+							if(k&C)
+								kk=F;
+							if(k&D)
+								kk=E;
+							if(k&E)
+								kk=D;
+							if(k&F)
+								kk=C;
+							if(k&G)
+								kk=B;
+							if(k&H)
+								kk=A;
+							if(array[x][y][z].m & k)
+								array[xN][yN][zN].m |= kk;
+							if(array[x][y][z].p[0] & k)
+								array[xN][yN][zN].p[0] |= kk;
+							if(array[x][y][z].p[1] & k)
+								array[xN][yN][zN].p[1] |= kk;
+							if(array[x][y][z].p[2] & k)
+								array[xN][yN][zN].p[2] |= kk;
+						}
+							
 						#pragma omp atomic
 						array[xN][yN][zN].m |= k & array[x][y][z].m;
 						#pragma omp atomic
@@ -732,15 +801,18 @@ void set_plate(Node***a, int S, int R, int X, int Y, int Z)
 	}
 }
 
-string write_plate(int Sx, int Sy, int z, int X, int Y, int Z, int dx)
+string write_plate(int R, int z, int X, int Y, int Z, int dx)
 {
 	ofstream out;
 	string file_name = "plate";
 	out.open(file_name);
 
-	int R2 = pow(Sx / 2, 2);
+	int R2 = pow(R, 2);
+	
+	int Sx = X/2;
+	int Sy = Y/2;
 
-	int step = dx / 2;
+	int step = dx;
 	int x, y;
 	int x2, y2;
 
@@ -899,9 +971,9 @@ void compute_velocity(Node***array, double****v, double****mean, int dx, int dy,
 					}
 				}
 
-							v[i][j][k][0] /= N;
-							v[i][j][k][1] /= N;
-							v[i][j][k][2] /= N;
+				v[i][j][k][0] /= N;
+				v[i][j][k][1] /= N;
+				v[i][j][k][2] /= N;
 
 				mean[i][j][k][0] += v[i][j][k][0];
 				mean[i][j][k][1] += v[i][j][k][1];
@@ -1506,18 +1578,20 @@ void total_speed(double****v, int I, int J, int K)
 	cout << x << "    " << y << "    " << z << endl;
 }
 
-void flow_in_Z(Node***a, int X, int Y, int Z)
+void flow_in_Z(Node***a, int X, int Y, int Z, int start)
 {
 	int x, y;
-	int z = 1;
+	int z = 2 - start;
 
 #pragma omp parallel for private (x,y)
-	for (x = 1; x < X - 1; ++x)
+	for (x = 2 - start; x < X - 1; x+=2)
 	{
-		for (y = 1; y < Y - 1; ++y)
+		for (y = 2 - start; y < Y - 1; y+=2)
 		{
 			a[x][y][z].m |= dirZ;
-			a[x][y][z].p[2] |= dirZ;
+			a[x][y][z].p[0] = 0;
+			a[x][y][z].p[1] = 0;
+			a[x][y][z].p[2] = dirZ;
 		}
 	}
 }
@@ -1526,15 +1600,15 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 120;
-	int Y = X;
-	int Z = X;
+	int X = 320;
+	int Y = 320;
+	int Z = 640;
 
-	int T = 200;
+	int T = 3000;
 
 	//size of area we use to compute macroscopic velocity
 	// PLEASE, use integer divisors of X,Y,Z
-	int dx = 10;
+	int dx = 40;
 	int dy = dx;
 	int dz = dx;
 
@@ -1568,7 +1642,7 @@ int main(int argc, char**argv)
 
 
 	/* SET TUNNEL BY OBSTACLES */
-	//set_tunnel(array,X,Y,Z);
+	set_tunnel(array,X,Y,Z);
 	//set_tunnel(even,X,Y,Z);
 
 	/* RADIUS AND MIDDLE OF THE SPHERICAL OBSTACLE AND ROUND PLATE */
@@ -1581,14 +1655,17 @@ int main(int argc, char**argv)
 
 	/* SET OBSTACLES */
 	//	set_sphere(array,S,R,X,Y,Z);
-	//	set_plate(array,S,R,X,Y,Z);
 
-	//	string obstacle;
+		int R = X/8;
+		int S = Z/8;
+		set_plate(array,S,R,X,Y,Z);
+
+		string obstacle;
 	//	obstacle = write_sphere(Sp,R,X,Y,Z);
-	//	obstacle = write_plate(2*R,2*R,S,X,Y,Z,dx);
+		obstacle = write_plate(R,S,X,Y,Z,dx);
 
 //	set_initial(array,X,Y,Z);
-	taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
+	//taylor_green_vortex(array, I, J, K, X, Y, Z, dx, dy, dz);
 
 	int start;
 	int div;
@@ -1655,7 +1732,7 @@ int main(int argc, char**argv)
 		}
 		*/
 		//	sphere_to_middle_flow(array, X, Y, Z, R, R2in, R2out, start);
-		//	flow_in_Z(array, X, Y, Z);
+		flow_in_Z(array, X, Y, Z, start);
 		Collision(array, X, Y, Z, start);
 		Propagation(array, X, Y, Z, start);
 	}
