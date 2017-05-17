@@ -1539,7 +1539,7 @@ int main(int argc, char**argv)
 {
 	//start measure time
 	//size of the grid
-	int X = 800;
+	int X = 320;
 	int Y = X;
 	int Z = X;
 
@@ -1607,7 +1607,7 @@ int main(int argc, char**argv)
 	int div;
 
 	ofstream out;
-	out.open("deweak_8");
+	out.open("deweak_1");
 
 	time_t START = time(NULL);
 	for (int t = 0; t <= T; ++t)
