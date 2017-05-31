@@ -296,6 +296,120 @@ void Propagation(Node***array, int X, int Y, int Z, int R1, int R2, int start)
 	}
 }
 
+void set_speed(Node***a, int i, int j, int k, int dx, int dy, int dz, double vx, double vy, double vz)
+{
+	double n = 0;
+	int mx = 0;
+	int my = 0;
+	int mz = 0;
+
+	unsigned char sx = vx >= 0 ? dirX : mirX;
+	unsigned char sy = vy >= 0 ? dirY : mirY;
+	unsigned char sz = vz >= 0 ? dirZ : mirZ;
+
+	double absx = vx >= 0 ? vx : -vx;
+	double absy = vy >= 0 ? vy : -vy;
+	double absz = vz >= 0 ? vz : -vz;
+
+	for (int x = i; x < i + dx; x += 2)
+	{
+		for (int y = j; y < j + dy; y += 2)
+		{
+			for (int z = k; z < k + dz; z += 2)
+			{
+				n += 1;
+				if (mx / n < absx)
+				{
+					++mx;
+					a[x][y][z].m |= sx;
+					a[x][y][z].p[0] |= sx;
+				}
+				if (my / n < absy)
+				{
+					++my;
+					a[x][y][z].m |= sy;
+					a[x][y][z].p[1] |= sy;
+				}
+				if (mz / n < absz)
+				{
+					++mz;
+					a[x][y][z].m |= sz;
+					a[x][y][z].p[2] |= sz;
+				}
+			}
+		}
+	}
+}
+
+void null_flow(Node***a, int I, int J, int K, int dx, int dy, int dz)
+{
+	for(int i = I; i < I + dx; i+=2)
+		for(int j = J; j < J + dy; j+=2)
+			for(int k = K; k < K + dz; k+=2)
+			{
+				a[i][j][k].m = 0;
+				a[i][j][k].p[0] = 0;
+				a[i][j][k].p[1] = 0;
+				a[i][j][k].p[2] = 0;
+			}
+}
+
+void null_flow(Node***a, int I, int J, int K, int dx, int dy, int dz)
+{
+	double R = I/2;
+	double angle = atan(1.0/R);
+	for(double phi = 0; phi < 0.5*M_PI; phi += angle)
+	{
+		double cos_phi = cos(phi);
+		double sin_phi = sin(phi);
+		for(double theta = 0; theta < 0.5*M_PI; theta += angle)
+		{
+			int i = cos(theta) * cos_phi; 			
+			int j = sin(theta) * cos_phi;
+			int k = sin_phi;
+			nul_speed(a,R * (1 + i), R * (1 + j), R * (1 + k), dx, dy, dz);
+			nul_speed(a,R * (1 + i), R * (1 + j), R * (1 - k), dx, dy, dz);
+			nul_speed(a,R * (1 + i), R * (1 - j), R * (1 + k), dx, dy, dz);
+			nul_speed(a,R * (1 + i), R * (1 - j), R * (1 - k), dx, dy, dz);
+			nul_speed(a,R * (1 - i), R * (1 + j), R * (1 + k), dx, dy, dz);
+			nul_speed(a,R * (1 - i), R * (1 + j), R * (1 - k), dx, dy, dz);
+			nul_speed(a,R * (1 - i), R * (1 - j), R * (1 + k), dx, dy, dz);
+			nul_speed(a,R * (1 - i), R * (1 - j), R * (1 - k), dx, dy, dz);
+		}
+	}
+}
+void sfere_flow(Node***a, int I, int J, int K, int dx, int dy, int dz)
+{
+	double R = I/2;
+	double angle = atan(1.0/R);
+	for(double phi = 0; phi < 0.5*M_PI; phi += angle)
+	{
+		double cos_phi = cos(phi);
+		double sin_phi = sin(phi);
+		for(double theta = 0; theta < 0.5*M_PI; theta += angle)
+		{
+			int i = cos(theta) * cos_phi; 			
+			int j = sin(theta) * cos_phi;
+			int k = sin_phi;
+			set_speed(a,R * (1 + i), R * (1 + j), R * (1 + k), dx, dy, dz, -i, -j, -k);
+			nul_speed(a,R * (1 + i), R * (1 + j), R * (1 + k), dx, dy, dz);
+			set_speed(a,R * (1 + i), R * (1 + j), R * (1 - k), dx, dy, dz, -i, -j, +k);
+			nul_speed(a,R * (1 + i), R * (1 + j), R * (1 - k), dx, dy, dz);
+			set_speed(a,R * (1 + i), R * (1 - j), R * (1 + k), dx, dy, dz, -i, +j, -k);
+			nul_speed(a,R * (1 + i), R * (1 - j), R * (1 + k), dx, dy, dz);
+			set_speed(a,R * (1 + i), R * (1 - j), R * (1 - k), dx, dy, dz, -i, +j, +k);
+			nul_speed(a,R * (1 + i), R * (1 - j), R * (1 - k), dx, dy, dz);
+			set_speed(a,R * (1 - i), R * (1 + j), R * (1 + k), dx, dy, dz, +i, -j, -k);
+			nul_speed(a,R * (1 - i), R * (1 + j), R * (1 + k), dx, dy, dz);
+			set_speed(a,R * (1 - i), R * (1 + j), R * (1 - k), dx, dy, dz, +i, -j, +k);
+			nul_speed(a,R * (1 - i), R * (1 + j), R * (1 - k), dx, dy, dz);
+			set_speed(a,R * (1 - i), R * (1 - j), R * (1 + k), dx, dy, dz, +i, +j, -k);
+			nul_speed(a,R * (1 - i), R * (1 - j), R * (1 + k), dx, dy, dz);
+			set_speed(a,R * (1 - i), R * (1 - j), R * (1 - k), dx, dy, dz, +i, +j, +k);
+			nul_speed(a,R * (1 - i), R * (1 - j), R * (1 - k), dx, dy, dz);
+		}
+	}
+}
 
 void sphere_to_middle_flow(Node***a, int X, int Y, int Z, int R, int R2in, int R2out, int start)
 {
@@ -1517,6 +1631,7 @@ int main(int argc, char**argv)
 		if (!(t%10))
 		{
 			compute_velocity(array,velocity,mean_vel,Gamma,dx,dy,dz,I,J,K);
+			sfere_flow(a, I, J, K, dx, dy, dz);
 			//SRCorrelation(velocity,SRC,I,J,K);		
 			//covariance_tensor(velocity,Gamma,I,J,K);
 			//file_name = write_velocity(velocity,t,I,J,K,dx,dy,dz);
